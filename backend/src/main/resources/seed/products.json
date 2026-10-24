@@ -1,0 +1,264 @@
+[
+  {
+    "name": "Fresh Organic Milk (1L)",
+    "description": "Farm-fresh organic whole milk, rich in calcium and vitamins.",
+    "price": 75,
+    "category": "Groceries",
+    "stock": 200,
+    "discount": 0,
+    "rating": 4.5,
+    "image": "/images/products/fresh-organic-milk-1l.svg"
+  },
+  {
+    "name": "Basmati Rice (5kg)",
+    "description": "Premium aged basmati rice, long grain with perfect aroma.",
+    "price": 450,
+    "category": "Groceries",
+    "stock": 150,
+    "discount": 5,
+    "rating": 4.7,
+    "image": "/images/products/basmati-rice-5kg.svg"
+  },
+  {
+    "name": "Whole Wheat Bread",
+    "description": "Freshly baked whole wheat bread, no preservatives added.",
+    "price": 55,
+    "category": "Groceries",
+    "stock": 100,
+    "discount": 0,
+    "rating": 4.3,
+    "image": "/images/products/whole-wheat-bread.svg"
+  },
+  {
+    "name": "Farm Eggs (12 pcs)",
+    "description": "Free-range farm eggs, protein-rich, collected daily.",
+    "price": 95,
+    "category": "Groceries",
+    "stock": 300,
+    "discount": 0,
+    "rating": 4.6,
+    "image": "/images/products/farm-eggs-12-pcs.svg"
+  },
+  {
+    "name": "Sunflower Oil (1L)",
+    "description": "Cold-pressed sunflower oil, perfect for healthy cooking.",
+    "price": 180,
+    "category": "Groceries",
+    "stock": 120,
+    "discount": 10,
+    "rating": 4.4,
+    "image": "/images/products/sunflower-oil-1l.svg"
+  },
+  {
+    "name": "Toor Dal (1kg)",
+    "description": "Split pigeon peas, high protein, essential daily staple.",
+    "price": 120,
+    "category": "Groceries",
+    "stock": 200,
+    "discount": 0,
+    "rating": 4.5,
+    "image": "/images/products/toor-dal-1kg.svg"
+  },
+  {
+    "name": "Fresh Bananas (Dozen)",
+    "description": "Ripe sweet bananas, energy-packed, rich in potassium.",
+    "price": 60,
+    "category": "Fruits & Vegetables",
+    "stock": 500,
+    "discount": 0,
+    "rating": 4.8,
+    "image": "/images/products/fresh-bananas-dozen.svg"
+  },
+  {
+    "name": "Red Apples (1kg)",
+    "description": "Crispy Shimla red apples, sweet and naturally juicy.",
+    "price": 220,
+    "category": "Fruits & Vegetables",
+    "stock": 200,
+    "discount": 5,
+    "rating": 4.6,
+    "image": "/images/products/red-apples-1kg.svg"
+  },
+  {
+    "name": "Fresh Tomatoes (500g)",
+    "description": "Vine-ripened tomatoes, perfect for cooking and salads.",
+    "price": 40,
+    "category": "Fruits & Vegetables",
+    "stock": 400,
+    "discount": 0,
+    "rating": 4.4,
+    "image": "/images/products/fresh-tomatoes-500g.svg"
+  },
+  {
+    "name": "Spinach Bunch (250g)",
+    "description": "Fresh organic spinach, iron-rich superfood.",
+    "price": 30,
+    "category": "Fruits & Vegetables",
+    "stock": 300,
+    "discount": 0,
+    "rating": 4.5,
+    "image": "/images/products/spinach-bunch-250g.svg"
+  },
+  {
+    "name": "Alphonso Mango (1kg)",
+    "description": "King of fruits – sweet, aromatic, premium Ratnagiri quality.",
+    "price": 350,
+    "category": "Fruits & Vegetables",
+    "stock": 0,
+    "discount": 0,
+    "rating": 4.9,
+    "image": "/images/products/alphonso-mango-1kg.svg",
+    "isAvailable": false
+  },
+  {
+    "name": "Carrots (500g)",
+    "description": "Crunchy fresh carrots, rich in beta-carotene and fiber.",
+    "price": 35,
+    "category": "Fruits & Vegetables",
+    "stock": 350,
+    "discount": 0,
+    "rating": 4.3,
+    "image": "/images/products/carrots-500g.svg"
+  },
+  {
+    "name": "Greek Yogurt (400g)",
+    "description": "Thick creamy yogurt, high protein, probiotic-rich.",
+    "price": 110,
+    "category": "Dairy",
+    "stock": 100,
+    "discount": 0,
+    "rating": 4.6,
+    "image": "/images/products/greek-yogurt-400g.svg"
+  },
+  {
+    "name": "Fresh Paneer (200g)",
+    "description": "Homemade-style cottage cheese, soft and creamy texture.",
+    "price": 85,
+    "category": "Dairy",
+    "stock": 150,
+    "discount": 0,
+    "rating": 4.7,
+    "image": "/images/products/fresh-paneer-200g.svg"
+  },
+  {
+    "name": "Butter (100g)",
+    "description": "Pure cow milk butter, rich creamy taste for cooking.",
+    "price": 65,
+    "category": "Dairy",
+    "stock": 200,
+    "discount": 5,
+    "rating": 4.5,
+    "image": "/images/products/butter-100g.svg"
+  },
+  {
+    "name": "Cheddar Cheese (200g)",
+    "description": "Aged cheddar cheese, sharp flavour, perfect for sandwiches.",
+    "price": 240,
+    "category": "Dairy",
+    "stock": 0,
+    "discount": 0,
+    "rating": 4.6,
+    "image": "/images/products/cheddar-cheese-200g.svg",
+    "isAvailable": false
+  },
+  {
+    "name": "Mixed Nuts (250g)",
+    "description": "Premium roasted almonds, cashews, walnuts and pistachios.",
+    "price": 380,
+    "category": "Snacks",
+    "stock": 100,
+    "discount": 10,
+    "rating": 4.7,
+    "image": "/images/products/mixed-nuts-250g.svg"
+  },
+  {
+    "name": "Dark Chocolate (100g)",
+    "description": "70% cocoa dark chocolate, rich in antioxidants.",
+    "price": 195,
+    "category": "Snacks",
+    "stock": 150,
+    "discount": 0,
+    "rating": 4.8,
+    "image": "/images/products/dark-chocolate-100g.svg"
+  },
+  {
+    "name": "Oat Cookies (200g)",
+    "description": "Crunchy oat and raisin cookies, freshly baked daily.",
+    "price": 120,
+    "category": "Snacks",
+    "stock": 100,
+    "discount": 0,
+    "rating": 4.4,
+    "image": "/images/products/oat-cookies-200g.svg"
+  },
+  {
+    "name": "Potato Chips (150g)",
+    "description": "Classic salted chips, extra crispy and light.",
+    "price": 45,
+    "category": "Snacks",
+    "stock": 250,
+    "discount": 0,
+    "rating": 4.3,
+    "image": "/images/products/potato-chips-150g.svg"
+  },
+  {
+    "name": "Green Tea (25 bags)",
+    "description": "Premium Darjeeling green tea, antioxidant-rich brew.",
+    "price": 160,
+    "category": "Beverages",
+    "stock": 200,
+    "discount": 0,
+    "rating": 4.6,
+    "image": "/images/products/green-tea-25-bags.svg"
+  },
+  {
+    "name": "Orange Juice (1L)",
+    "description": "100% pure squeezed orange juice, no added sugar.",
+    "price": 145,
+    "category": "Beverages",
+    "stock": 100,
+    "discount": 5,
+    "rating": 4.5,
+    "image": "/images/products/orange-juice-1l.svg"
+  },
+  {
+    "name": "Cold Brew Coffee (300ml)",
+    "description": "Smooth cold brew coffee from premium arabica beans.",
+    "price": 220,
+    "category": "Beverages",
+    "stock": 80,
+    "discount": 0,
+    "rating": 4.7,
+    "image": "/images/products/cold-brew-coffee-300ml.svg"
+  },
+  {
+    "name": "Dish Wash Liquid (500ml)",
+    "description": "Lemon-scented dish wash, removes grease effectively.",
+    "price": 85,
+    "category": "Household",
+    "stock": 200,
+    "discount": 0,
+    "rating": 4.4,
+    "image": "/images/products/dish-wash-liquid-500ml.svg"
+  },
+  {
+    "name": "Hand Sanitizer (200ml)",
+    "description": "70% alcohol sanitizer, kills 99.9% of germs.",
+    "price": 75,
+    "category": "Household",
+    "stock": 300,
+    "discount": 10,
+    "rating": 4.6,
+    "image": "/images/products/hand-sanitizer-200ml.svg"
+  },
+  {
+    "name": "Tissue Box (200 sheets)",
+    "description": "Soft 2-ply facial tissues, gentle on sensitive skin.",
+    "price": 65,
+    "category": "Household",
+    "stock": 250,
+    "discount": 0,
+    "rating": 4.3,
+    "image": "/images/products/tissue-box-200-sheets.svg"
+  }
+]

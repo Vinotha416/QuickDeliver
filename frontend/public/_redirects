@@ -1,0 +1,17 @@
+# 1) Forward API calls to the Java backend.  >>> Replace the URL with your deployed backend <<<
+/api/*          https://YOUR-BACKEND-URL/api/:splat   200!
+
+# 2) Clean page URLs (same routes the Express/Spring server had)
+/               /pages/home.html          200
+/login          /pages/login.html         200
+/register       /pages/register.html      200
+/logout         /pages/logout.html        200
+/products       /pages/products.html      200
+/cart           /pages/cart.html          200
+/checkout       /pages/checkout.html      200
+/orders         /pages/orders.html        200
+/order/*        /pages/order-detail.html  200
+/dashboard      /pages/dashboard.html     200
+/analytics      /pages/analytics.html     200
+/admin          /pages/admin.html         200
+/agent          /pages/agent.html         200

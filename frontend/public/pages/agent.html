@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent – QuickDeliver</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .tabs{display:flex;gap:4px;background:#fff;border-radius:14px;padding:5px;box-shadow:var(--shadow);margin-bottom:20px;overflow-x:auto}
+  .tab{flex:1;min-width:90px;padding:9px;border-radius:10px;border:none;background:transparent;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;color:var(--muted);transition:all .2s;white-space:nowrap;text-align:center}
+  .tab.active{background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.3)}
+  .oc{background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:var(--shadow)}
+  .atype-btn{padding:9px 14px;border-radius:9px;border:2px solid var(--border);background:#fff;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:all .2s}
+  .atype-btn.sel{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .qmsg{padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;cursor:pointer;font-size:12px;font-family:inherit;width:100%;text-align:left;margin-bottom:5px;transition:all .2s}
+  .qmsg.sel{background:#eff6ff;border-color:var(--primary);color:var(--primary);font-weight:600}
+  .date-btn{padding:7px 12px;border-radius:8px;border:2px solid var(--border);background:#fff;cursor:pointer;font-size:12px;font-family:inherit;transition:all .2s;white-space:nowrap}
+  .date-btn.sel{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .slot-btn{border:2px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;background:#fff;font-family:inherit;transition:all .2s;flex:1}
+  .slot-btn.sel{background:var(--primary);color:#fff;border-color:var(--primary)}
+</style>
+</head>
+<body>
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div class="app-shell">
+  <div id="sidebar" class="sidebar"></div>
+  <div class="main-area">
+    <div id="topbar" class="topbar"></div>
+    <div class="page-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+        <div class="page-header" style="margin:0"><h1>🚴 Agent Dashboard</h1><p id="agInfo" class="text-muted text-sm" style="margin-top:2px"></p></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:13px;font-weight:600">Status:</span>
+          <select id="agStat" onchange="setAgStatus(this.value)" style="padding:8px 12px;border-radius:10px;border:2px solid var(--border);font-size:13px;font-family:inherit;font-weight:700">
+            <option value="available">🟢 Available</option>
+            <option value="busy">🟡 Busy</option>
+            <option value="offline">🔴 Offline</option>
+          </select>
+        </div>
+      </div>
+      <div class="stats-grid" id="statsRow"></div>
+      <div class="tabs">
+        <button class="tab" id="tbOrders"     onclick="setTab('orders',this)">📦 Orders</button>
+        <button class="tab" id="tbAlerts"     onclick="setTab('alerts',this)">📢 Send Alert</button>
+        <button class="tab" id="tbReschedule" onclick="setTab('reschedule',this)">🔄 Reschedule</button>
+        <button class="tab" id="tbProfile"    onclick="setTab('profile',this)">👤 Profile</button>
+      </div>
+      <div id="tc"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+var user = requireRole(['agent']);
+if (!user) throw '';
+initShell('agent','Agent Dashboard');
+document.getElementById('agInfo').textContent = user.name + ' | ' + user.email;
+
+var orders = [];
+var curTab = new URLSearchParams(location.search).get('tab') || 'orders';
+var alertType = 'weather', alertOrderId = '', reschedOrderId = '', reschedDate = '', reschedSlot = '';
+
+var QMSGS = {
+  weather: ['Heavy rain causing delays in your area.','Storm warning – taking alternate route.','Foggy conditions – driving carefully.','Extreme weather – safe delivery ensured.'],
+  traffic: ['Heavy traffic jam on main route. Delay ~20–30 min.','Road construction blocking primary route.','Accident ahead causing major slowdown.','Festival event – road closures in area.'],
+  delay:   ['Slight delay due to high order volume.','Previous delivery took longer than expected.','Vehicle issue causing short delay.','Running 15 mins behind schedule.'],
+  general: ['Please keep phone available for delivery.','Your delivery is nearby – please be available.','Reached your area – please guide to address.','Attempted delivery – please confirm address.']
+};
+var DATES = Array.from({length:7},function(_,i){var d=new Date();d.setDate(d.getDate()+i+1);return d;});
+var NEXT     = {assigned:'picked_up',picked_up:'in_transit',in_transit:'out_for_delivery',out_for_delivery:'delivered'};
+var NEXT_LBL = {assigned:'📦 Mark Picked Up',picked_up:'🚴 Mark In Transit',in_transit:'🏃 Out for Delivery',out_for_delivery:'✅ Mark Delivered'};
+var NEXT_COL = {assigned:'#f59e0b',picked_up:'#06b6d4',in_transit:'#8b5cf6',out_for_delivery:'#10b981'};
+
+function initActiveTab() {
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+  var map = {orders:'tbOrders',alerts:'tbAlerts',reschedule:'tbReschedule',profile:'tbProfile'};
+  var el = document.getElementById(map[curTab]||'tbOrders');
+  if (el) el.classList.add('active');
+}
+
+async function loadOrders() {
+  try {
+    var d = await api('GET','/api/agent/orders');
+    orders = d.orders||[];
+    var active = orders.filter(function(o){return !['delivered','cancelled'].includes(o.status);}).length;
+    var done   = orders.filter(function(o){return o.status==='delivered';}).length;
+    document.getElementById('statsRow').innerHTML =
+      '<div class="stat-card" style="border-color:var(--warning)"><div class="stat-icon">📦</div><div><div class="stat-val" style="color:var(--warning)">'+active+'</div><div class="stat-label">Active Orders</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--success)"><div class="stat-icon">✅</div><div><div class="stat-val" style="color:var(--success)">'+done+'</div><div class="stat-label">Delivered</div></div></div>' +
+      '<div class="stat-card"><div class="stat-icon">📋</div><div><div class="stat-val">'+orders.length+'</div><div class="stat-label">Total Assigned</div></div></div>';
+  } catch(e) { toast('Failed to load orders: '+e.message,'error'); }
+}
+
+function setTab(tab, btn) {
+  curTab = tab;
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+  if (btn) btn.classList.add('active');
+  render();
+}
+
+function render() {
+  var c = document.getElementById('tc');
+  if (curTab==='orders')         renderOrders(c);
+  else if (curTab==='alerts')    renderAlerts(c);
+  else if (curTab==='reschedule') renderReschedule(c);
+  else                            renderProfile(c);
+}
+
+function renderOrders(c) {
+  if (!orders.length) {
+    c.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>No orders assigned yet</h3><p>Orders will appear here once assigned by admin</p></div>';
+    return;
+  }
+  c.innerHTML = orders.map(function(o){
+    var hasNext = !!NEXT[o.status];
+    var alerts = (o.notifications||[]).filter(function(n){return ['weather','traffic','delay'].includes(n.type);});
+    var lastAlert = alerts.slice(-1)[0];
+    return '<div class="oc">' +
+      '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px">' +
+        '<div><strong style="font-size:14px">#'+(o.orderNumber||'').slice(-8)+'</strong> <span class="badge status-'+o.status+'">'+o.status.replace(/_/g,' ')+'</span></div>' +
+        '<span style="font-size:12px;color:var(--muted)">'+new Date(o.createdAt).toLocaleDateString('en-IN')+'</span>' +
+      '</div>' +
+      '<div style="font-size:13px;display:flex;flex-direction:column;gap:4px;margin-bottom:10px">' +
+        '<div>👤 <strong>'+(o.user&&o.user.name||'Customer')+'</strong> &nbsp;📞 '+(o.user&&o.user.phone||'—')+'</div>' +
+        '<div>📍 '+(o.deliveryAddress||'—')+'</div>' +
+        '<div>⏰ '+(o.timeSlot&&o.timeSlot.date||'—')+' — '+(o.timeSlot&&o.timeSlot.slot||'—')+'</div>' +
+        '<div>💰 ₹'+o.totalAmount+' via '+(o.paymentMethod||'').toUpperCase()+'</div>' +
+      '</div>' +
+      (lastAlert?'<div style="background:#fef3c7;border:1px solid #fde047;border-radius:8px;padding:7px 10px;font-size:12px;color:#92400e;margin-bottom:8px">'+lastAlert.message+'</div>':'') +
+      (hasNext?'<button onclick="updStatus(\''+o._id+'\',\''+NEXT[o.status]+'\')" style="width:100%;padding:10px;border-radius:9px;border:none;background:'+NEXT_COL[o.status]+';color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:8px;font-family:inherit">'+NEXT_LBL[o.status]+'</button>':'') +
+      (!['delivered','cancelled'].includes(o.status)?'<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button onclick="quickAlert(\''+o._id+'\')" style="padding:7px 13px;border-radius:8px;border:1px solid #fde047;background:#fef3c7;color:#92400e;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit">🌧️ Alert</button>' +
+        '<button onclick="quickReschedule(\''+o._id+'\')" style="padding:7px 13px;border-radius:8px;border:1px solid #c4b5fd;background:#ede9fe;color:#5b21b6;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit">🔄 Reschedule</button>' +
+      '</div>':'') +
+    '</div>';
+  }).join('');
+}
+
+function quickAlert(id) { alertOrderId=id; setTab('alerts',document.getElementById('tbAlerts')); }
+function quickReschedule(id) { reschedOrderId=id; setTab('reschedule',document.getElementById('tbReschedule')); }
+
+function renderAlerts(c) {
+  var active = orders.filter(function(o){return !['delivered','cancelled'].includes(o.status);});
+  var qHtml = (QMSGS[alertType]||[]).map(function(m){
+    return '<button class="qmsg" onclick="pickMsg(this,\''+m.replace(/'/g,"\\'")+'\')">' + m + '</button>';
+  }).join('');
+  var typeButtons = ['weather','traffic','delay','general'].map(function(t){
+    var icons = {weather:'🌧️',traffic:'🚦',delay:'⏰',general:'📢'};
+    return '<button class="atype-btn'+(alertType===t?' sel':'')+'" onclick="setAT(\''+t+'\',this)">'+icons[t]+' '+t.charAt(0).toUpperCase()+t.slice(1)+'</button>';
+  }).join('');
+  var orderOptions = active.map(function(o){
+    return '<option value="'+o._id+'"'+(alertOrderId===o._id?' selected':'')+'>#'+(o.orderNumber||'').slice(-8)+' – '+(o.user&&o.user.name||'Customer')+'</option>';
+  }).join('');
+
+  c.innerHTML = '<div class="card">' +
+    '<div class="card-title">📢 Send Alert to Customer</div>' +
+    '<div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:10px;padding:10px 14px;font-size:12px;color:#065f46;margin-bottom:14px">✅ <strong>Only agents can send alerts.</strong> Customers receive them in Notifications. Admin can view them.</div>' +
+    '<div class="form-group"><label>Select Order *</label>' +
+      '<select id="alertOrd" style="width:100%;padding:10px 13px;border-radius:10px;border:2px solid var(--border);font-size:13px;font-family:inherit">' +
+        '<option value="">— Select an order —</option>' + orderOptions +
+      '</select>' +
+    '</div>' +
+    '<div class="form-group"><label>Alert Type *</label>' +
+      '<div style="display:flex;gap:7px;flex-wrap:wrap">' + typeButtons + '</div>' +
+    '</div>' +
+    '<div class="form-group"><label>Quick Messages</label><div id="qmBtns">' + qHtml + '</div></div>' +
+    '<div class="form-group"><label>Message *</label><textarea id="alertMsg" rows="3" placeholder="Type your alert message here…" style="width:100%;padding:11px 14px;border-radius:10px;border:2px solid var(--border);font-family:inherit;font-size:14px;outline:none;resize:vertical"></textarea></div>' +
+    '<button class="btn btn-primary" onclick="sendAlert()">📤 Send Alert</button>' +
+  '</div>';
+}
+
+function setAT(type, btn) {
+  alertType = type;
+  document.querySelectorAll('.atype-btn').forEach(function(b){b.classList.remove('sel');});
+  if(btn) btn.classList.add('sel');
+  var qHtml = (QMSGS[type]||[]).map(function(m){
+    return '<button class="qmsg" onclick="pickMsg(this,\''+m.replace(/'/g,"\\'")+'\')">' + m + '</button>';
+  }).join('');
+  document.getElementById('qmBtns').innerHTML = qHtml;
+  var el = document.getElementById('alertMsg');
+  if (el) el.value = '';
+}
+
+function pickMsg(btn, msg) {
+  document.querySelectorAll('.qmsg').forEach(function(b){b.classList.remove('sel');});
+  if(btn) btn.classList.add('sel');
+  var el = document.getElementById('alertMsg');
+  if (el) el.value = msg;
+}
+
+async function sendAlert() {
+  var ordId = (document.getElementById('alertOrd')||{}).value || alertOrderId;
+  var msg   = ((document.getElementById('alertMsg')||{}).value||'').trim();
+  if (!ordId) return toast('Please select an order','error');
+  if (!msg)   return toast('Please enter a message','error');
+  try {
+    await api('POST','/api/agent/orders/'+ordId+'/alert',{type:alertType,message:msg});
+    toast('✅ Alert sent to customer!');
+    var el = document.getElementById('alertMsg');
+    if (el) el.value = '';
+    document.querySelectorAll('.qmsg').forEach(function(b){b.classList.remove('sel');});
+    alertOrderId = '';
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function renderReschedule(c) {
+  var active = orders.filter(function(o){return !['delivered','cancelled'].includes(o.status);});
+  var orderOptions = active.map(function(o){
+    return '<option value="'+o._id+'"'+(reschedOrderId===o._id?' selected':'')+'>#'+(o.orderNumber||'').slice(-8)+' – '+(o.user&&o.user.name||'Customer')+' ('+((o.timeSlot&&o.timeSlot.date)||'—')+')</option>';
+  }).join('');
+  var dateButtons = DATES.map(function(d){
+    var s = d.toISOString().split('T')[0];
+    var l = d.toLocaleDateString('en-IN',{weekday:'short',month:'short',day:'numeric'});
+    return '<button class="date-btn'+(reschedDate===s?' sel':'')+'" onclick="setRD(\''+s+'\',this)">'+l+'</button>';
+  }).join('');
+
+  c.innerHTML = '<div class="card">' +
+    '<div class="card-title">🔄 Reschedule Delivery</div>' +
+    '<div class="form-group"><label>Select Order *</label>' +
+      '<select id="rsOrd" style="width:100%;padding:10px 13px;border-radius:10px;border:2px solid var(--border);font-size:13px;font-family:inherit">' +
+        '<option value="">— Select an order —</option>' + orderOptions +
+      '</select>' +
+    '</div>' +
+    '<div class="form-group"><label>New Delivery Date *</label>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">' + dateButtons + '</div>' +
+    '</div>' +
+    '<div class="form-group"><label>New Time Slot *</label>' +
+      '<div style="display:flex;gap:8px;margin-top:4px">' +
+        '<button class="slot-btn'+(reschedSlot==='Morning'?' sel':'')+'" onclick="setRS(\'Morning\',this)"><div style="font-size:20px">🌅</div><div style="font-weight:700;font-size:12px">Morning</div><div style="font-size:10px;color:'+(reschedSlot==='Morning'?'rgba(255,255,255,.8)':'var(--muted)')+'">7AM–11AM</div></button>' +
+        '<button class="slot-btn'+(reschedSlot==='Afternoon'?' sel':'')+'" onclick="setRS(\'Afternoon\',this)"><div style="font-size:20px">☀️</div><div style="font-weight:700;font-size:12px">Afternoon</div><div style="font-size:10px;color:'+(reschedSlot==='Afternoon'?'rgba(255,255,255,.8)':'var(--muted)')+'">12PM–4PM</div></button>' +
+        '<button class="slot-btn'+(reschedSlot==='Evening'?' sel':'')+'" onclick="setRS(\'Evening\',this)"><div style="font-size:20px">🌆</div><div style="font-weight:700;font-size:12px">Evening</div><div style="font-size:10px;color:'+(reschedSlot==='Evening'?'rgba(255,255,255,.8)':'var(--muted)')+'">5PM–9PM</div></button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="form-group"><label>Reason *</label>' +
+      '<textarea id="rsReason" rows="2" placeholder="Reason for rescheduling…" style="width:100%;padding:11px 14px;border-radius:10px;border:2px solid var(--border);font-family:inherit;font-size:14px;outline:none;resize:vertical"></textarea>' +
+    '</div>' +
+    '<button class="btn btn-warning" onclick="doReschedule()">🔄 Confirm Reschedule</button>' +
+  '</div>';
+}
+
+function setRD(d, btn) {
+  reschedDate = d;
+  document.querySelectorAll('.date-btn').forEach(function(b){b.classList.remove('sel');});
+  if(btn) btn.classList.add('sel');
+}
+function setRS(s, btn) {
+  reschedSlot = s;
+  document.querySelectorAll('.slot-btn').forEach(function(b){b.classList.remove('sel');});
+  if(btn) btn.classList.add('sel');
+}
+
+async function doReschedule() {
+  var ordId  = ((document.getElementById('rsOrd')||{}).value||'') || reschedOrderId;
+  var reason = ((document.getElementById('rsReason')||{}).value||'').trim();
+  if (!ordId)       return toast('Please select an order','error');
+  if (!reschedDate) return toast('Please select a new date','error');
+  if (!reschedSlot) return toast('Please select a time slot','error');
+  if (!reason)      return toast('Please enter a reason','error');
+  try {
+    await api('POST','/api/agent/orders/'+ordId+'/reschedule',{newDate:reschedDate,newSlot:reschedSlot,reason:reason});
+    toast('✅ Delivery rescheduled! Customer notified.');
+    reschedDate=''; reschedSlot=''; reschedOrderId='';
+    await loadOrders();
+    render();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function renderProfile(c) {
+  c.innerHTML = '<div style="max-width:480px">' +
+    '<div class="card">' +
+      '<div style="text-align:center;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border)">' +
+        '<div style="width:68px;height:68px;border-radius:50%;background:var(--grad);color:#fff;font-size:28px;font-weight:900;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">'+user.name[0].toUpperCase()+'</div>' +
+        '<div style="font-weight:900;font-size:18px">'+user.name+'</div>' +
+        '<span class="badge badge-purple" style="margin-top:5px">Delivery Agent</span>' +
+      '</div>' +
+      '<div class="form-group"><label>Full Name</label><input id="agName" value="'+user.name+'"></div>' +
+      '<div class="form-group"><label>Email <span class="text-muted text-sm">(cannot change)</span></label><input value="'+user.email+'" disabled style="background:#f8fafc;color:#94a3b8"></div>' +
+      '<div class="form-group"><label>Phone</label><input id="agPhone" value="'+(user.phone||'')+'"></div>' +
+      '<button class="btn btn-primary" onclick="saveAgentProfile()">💾 Save Changes</button>' +
+    '</div>' +
+    '<div class="card" style="margin-top:14px">' +
+      '<div class="card-title">📊 My Stats</div>' +
+      '<div class="info-row"><span>Assigned Orders</span><strong>'+orders.length+'</strong></div>' +
+      '<div class="info-row"><span>Delivered</span><strong style="color:var(--success)">'+orders.filter(function(o){return o.status==='delivered';}).length+'</strong></div>' +
+      '<div class="info-row" style="border:none"><span>Active</span><strong style="color:var(--warning)">'+orders.filter(function(o){return !['delivered','cancelled'].includes(o.status);}).length+'</strong></div>' +
+    '</div>' +
+  '</div>';
+}
+
+async function saveAgentProfile() {
+  try {
+    var name  = document.getElementById('agName').value.trim();
+    var phone = document.getElementById('agPhone').value.trim();
+    var d = await api('PUT','/api/auth/profile',{name:name,phone:phone});
+    setAuth(getToken(),Object.assign({},user,d.user));
+    toast('Profile updated!');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function updStatus(id, status) {
+  try {
+    await api('PUT','/api/agent/orders/'+id+'/status',{status:status});
+    toast('Status updated!');
+    await loadOrders();
+    if (curTab==='orders') render();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function setAgStatus(s) {
+  try { await api('PUT','/api/agent/my-status',{agentStatus:s}); toast('Status: '+s); }
+  catch(e) { toast(e.message,'error'); }
+}
+
+// Init
+(async function(){
+  await loadOrders();
+  initActiveTab();
+  render();
+})();
+</script>
+</body>
+</html>

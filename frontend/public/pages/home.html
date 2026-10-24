@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QuickDeliver – Fast Grocery Delivery</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  body{height:auto;overflow:auto}
+  .pnav{background:rgba(15,23,42,.96);backdrop-filter:blur(10px);height:64px;display:flex;align-items:center;padding:0 5%;justify-content:space-between;position:sticky;top:0;z-index:100;border-bottom:1px solid rgba(255,255,255,.08)}
+  .pnav .brand{color:#fff;font-size:19px;font-weight:900;text-decoration:none;display:flex;align-items:center;gap:8px}
+  .pnav .links{display:flex;align-items:center;gap:6px}
+  .pnav .links a{color:rgba(255,255,255,.72);text-decoration:none;font-size:14px;padding:6px 12px;border-radius:8px;font-weight:500}
+  .pnav .links a:hover{background:rgba(255,255,255,.09);color:#fff}
+  .btn-nav-ln{background:rgba(255,255,255,.1);color:#fff!important;border:1px solid rgba(255,255,255,.2);padding:7px 16px!important;border-radius:9px!important;font-weight:700!important}
+  .btn-nav-st{background:var(--grad)!important;color:#fff!important;padding:8px 18px!important;border-radius:9px!important;font-weight:700!important}
+  .hero{min-height:92vh;background:#0f172a;position:relative;display:flex;align-items:center;overflow:hidden}
+  .hero-bg{position:absolute;inset:0}
+  .hero-bg img{width:100%;height:100%;object-fit:cover;opacity:.32}
+  .hero-bg-g{position:absolute;inset:0;background:linear-gradient(135deg,rgba(15,23,42,.96) 40%,rgba(99,102,241,.25))}
+  .hero-c{position:relative;z-index:1;padding:80px 5%;max-width:680px}
+  .hero-badge{display:inline-block;background:rgba(99,102,241,.2);color:#a5b4fc;border:1px solid rgba(99,102,241,.3);padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:22px}
+  .hero-title{font-size:clamp(36px,5.5vw,64px);font-weight:900;color:#fff;line-height:1.07;margin-bottom:18px}
+  .hero-title span{background:linear-gradient(135deg,#a5b4fc,#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .hero-desc{font-size:17px;color:rgba(255,255,255,.68);line-height:1.75;margin-bottom:34px;max-width:500px}
+  .hero-btns{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:50px}
+  .hero-btns a{padding:14px 30px;border-radius:12px;font-weight:800;font-size:15px;text-decoration:none;transition:all .2s}
+  .hb1{background:var(--grad);color:#fff;box-shadow:0 8px 28px rgba(99,102,241,.35)}
+  .hb2{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(8px)}
+  .hero-stats{display:flex;gap:30px;flex-wrap:wrap}
+  .hs strong{display:block;font-size:28px;font-weight:900;color:#fff}
+  .hs span{font-size:12px;color:rgba(255,255,255,.48)}
+  section{padding:68px 5%}
+  .sh{text-align:center;margin-bottom:46px}
+  .sh h2{font-size:clamp(24px,3.5vw,36px);font-weight:900;margin-bottom:10px}
+  .sh p{color:var(--muted);font-size:15px;max-width:460px;margin:0 auto}
+  .cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:12px;max-width:1100px;margin:0 auto}
+  .cat{background:#fff;border-radius:16px;padding:20px 10px;text-align:center;text-decoration:none;border:2px solid var(--border);transition:all .2s;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+  .cat:hover{transform:translateY(-5px);box-shadow:0 12px 28px rgba(99,102,241,.15);border-color:var(--primary)}
+  .cat .ci{font-size:36px;margin-bottom:8px}
+  .cat .cn{font-weight:700;font-size:12px;color:#374151}
+  .feat-sec{background:linear-gradient(135deg,#f0f4ff,#faf5ff)}
+  .feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;max-width:1200px;margin:0 auto}
+  .fc{background:#fff;border-radius:16px;padding:26px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+  .fc .fi{font-size:38px;margin-bottom:12px}
+  .fc .fn{font-weight:800;font-size:16px;margin-bottom:7px}
+  .fc .fd{color:var(--muted);font-size:13px;line-height:1.65}
+  .cta-sec{background:linear-gradient(135deg,#1e1b4b,#312e81,#4338ca);text-align:center;color:#fff}
+  .cta-sec h2{font-size:clamp(24px,4vw,40px);font-weight:900;margin-bottom:14px}
+  .cta-sec p{color:rgba(255,255,255,.72);font-size:16px;margin-bottom:34px}
+  .cta-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .cta-btns a{padding:14px 34px;border-radius:12px;font-weight:800;font-size:15px;text-decoration:none}
+  .pfooter{background:#0f172a;color:rgba(255,255,255,.48);padding:38px 5% 22px}
+  .pfooter-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:28px;max-width:1200px;margin:0 auto 24px}
+  .pfooter-bn{font-size:17px;font-weight:900;color:#a5b4fc;margin-bottom:9px}
+  .pfooter-h{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#a5b4fc;margin-bottom:10px}
+  .pfooter-l{display:flex;flex-direction:column;gap:6px}
+  .pfooter-l a{color:rgba(255,255,255,.45);text-decoration:none;font-size:12px}
+  .pfooter-b{max-width:1200px;margin:0 auto;border-top:1px solid rgba(255,255,255,.08);padding-top:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:11px}
+</style>
+</head>
+<body>
+<nav class="pnav">
+  <a href="/" class="brand"> ⭐ Smart Deliver</a>
+  <div class="links">
+    <a href="/products">Products</a>
+    <a href="/login" class="btn-nav-ln" id="loginLink">Login</a>
+    <a href="/register" class="btn-nav-st" id="startLink">Get Started →</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-bg">
+    <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=1600&q=80" alt="Delivery" onerror="this.style.display='none'">
+    <div class="hero-bg-g"></div>
+  </div>
+  <div class="hero-c">
+    <div class="hero-badge">⏰ Time Slot Based Delivery System ⏰</div>
+    <h1 class="hero-title">Intelligent Time Slot Optimized Delivery System</h1>
+    <p class="hero-desc">Schedule your deliveries, choose your time slot, and track every step from cart to your door.</p>
+    <div class="hero-btns">
+      <a href="/register" class="hb1">🛒 Shop Now – It's Free</a>
+      <a href="/products" class="hb2">Browse Products →</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hs"><strong>26+</strong><span>Products</span></div>
+      <div class="hs"><strong>5</strong><span>Agents</span></div>
+      <div class="hs"><strong>3</strong><span>Time Slots</span></div>
+      <div class="hs"><strong>4</strong><span>Payment Options</span></div>
+    </div>
+  </div>
+</div>
+</body>
+
+<section>
+  <div class="sh"><h2>Shop by Category</h2><p>Fresh products across all essential daily categories</p></div>
+  <div class="cats">
+    <a href="/products?category=Groceries" class="cat"><div class="ci">🛒</div><div class="cn">Groceries</div></a>
+    <a href="/products?category=Fruits+%26+Vegetables" class="cat"><div class="ci">🥦</div><div class="cn">Fruits & Veggies</div></a>
+    <a href="/products?category=Dairy" class="cat"><div class="ci">🥛</div><div class="cn">Dairy</div></a>
+    <a href="/products?category=Snacks" class="cat"><div class="ci">🍿</div><div class="cn">Snacks</div></a>
+    <a href="/products?category=Beverages" class="cat"><div class="ci">☕</div><div class="cn">Beverages</div></a>
+    <a href="/products?category=Household" class="cat"><div class="ci">🧹</div><div class="cn">Household</div></a>
+  </div>
+</section>
+
+<section class="feat-sec">
+  <div class="sh"><h2>Why Choose QuickDeliver?</h2><p>Built for speed, reliability and your convenience</p></div>
+  <div class="feat-grid">
+    <div class="fc"><div class="fi">⏰</div><div class="fn">Scheduled Slots</div><div class="fd">Morning, afternoon or evening delivery — you decide exactly when.</div></div>
+    <div class="fc"><div class="fi">🔒</div><div class="fn">Secure Payments</div><div class="fd">UPI, Credit Card, Google Pay or Cash on Delivery — all safe.</div></div>
+    <div class="fc"><div class="fi">🌧️</div><div class="fn">Smart Alerts</div><div class="fd">Agents alert you on weather or traffic delays so you're never in the dark.</div></div>
+    <div class="fc"><div class="fi">🔄</div><div class="fn">Easy Reschedule</div><div class="fd">Plans change? Agents can reschedule delivery to a better time.</div></div>
+    <div class="fc"><div class="fi">📍</div><div class="fn">Live Tracking</div><div class="fd">Notified at every step — placed, picked up, in transit, delivered.</div></div>
+    <div class="fc"><div class="fi">⭐</div><div class="fn">Rate & Review</div><div class="fd">Honest feedback after delivery helps us keep improving for you.</div></div>
+  </div>
+</section>
+
+<section class="cta-sec">
+  <h2>Ready to Experience Fast Delivery?</h2>
+  <p>Join thousands of happy customers. Register free today!</p>
+  <div class="cta-btns">
+    <a href="/register" style="background:#fff;color:#1e1b4b">✨ Create Free Account</a>
+    <a href="/login" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25)">🔑 Login</a>
+  </div>
+</section>
+
+<footer class="pfooter">
+  <div class="pfooter-g">
+    <div><div class="pfooter-bn">🚀 QuickDeliver</div><div style="font-size:12px;line-height:1.7">Fast, reliable grocery delivery with scheduled time slots and real-time tracking.</div></div>
+    <div><div class="pfooter-h">Quick Links</div><div class="pfooter-l"><a href="/">Home</a><a href="/products">Products</a><a href="/login">Login</a><a href="/register">Register</a></div></div>
+    <div><div class="pfooter-h">Time Slots</div><div style="font-size:12px;display:flex;flex-direction:column;gap:5px"><span>🌅 Morning: 7AM – 11AM</span><span>☀️ Afternoon: 12PM – 4PM</span><span>🌆 Evening: 5PM – 9PM</span></div></div>
+    <div><div class="pfooter-h">Support</div><div style="font-size:12px;display:flex;flex-direction:column;gap:5px"><span>📞 1800-123-4567</span><span>📧 support@quickdeliver.com</span><span>⏰ 24/7 Support</span></div></div>
+  </div>
+  <div class="pfooter-b"><span id="yr"></span><span>Made with ❤️ for fast deliveries</span></div>
+</footer>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  document.getElementById('yr').textContent = '© ' + new Date().getFullYear() + ' QuickDeliver. All rights reserved.';
+  const u = getUser();
+  if (u) {
+    const map = { admin: '/admin', agent: '/agent', customer: '/dashboard' };
+    document.getElementById('loginLink').style.display = 'none';
+    document.getElementById('startLink').textContent = u.role === 'admin' ? '⚙️ Admin Panel' : u.role === 'agent' ? '🚴 Dashboard' : '🛒 My Dashboard';
+    document.getElementById('startLink').href = map[u.role];
+  }
+</script>
+</body>
+</html>

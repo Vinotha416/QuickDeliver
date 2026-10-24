@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cart – QuickDeliver</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .cart-layout{display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start}
+  @media(max-width:768px){.cart-layout{grid-template-columns:1fr}}
+  .sum-card{background:#fff;border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);position:sticky;top:20px}
+  .sum-row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:10px}
+  .free-del{background:#d1fae5;color:#065f46;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;text-align:center;margin:10px 0}
+  .item-name{font-weight:700;font-size:14px;margin-bottom:2px}
+  .item-cat{font-size:11px;color:var(--muted);margin-bottom:8px}
+</style>
+</head>
+<body>
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div class="app-shell">
+  <div id="sidebar" class="sidebar"></div>
+  <div class="main-area">
+    <div id="topbar" class="topbar"></div>
+    <div class="page-content">
+      <div class="page-header"><h1>🛒 Shopping Cart</h1><p>Review your items before checkout</p></div>
+      <div id="cartContent"></div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/product-images.js"></script>
+<script>
+  const _u = requireRole(['customer']); if (!_u) throw '';
+  initShell('customer','Shopping Cart');
+
+  function render() {
+    const cart = getCart();
+    const c = document.getElementById('cartContent');
+    if (!cart.length) {
+      c.innerHTML=`<div class="empty-state"><div class="icon">🛒</div><h3>Your cart is empty</h3><p>Browse our fresh products</p><a href="/products" class="btn btn-primary">Shop Now →</a></div>`;
+      return;
+    }
+    const sub=cartTotal(), del=sub>500?0:40, total=sub+del;
+    c.innerHTML=`<div class="cart-layout">
+      <div>
+        ${cart.map(item=>`
+          <div class="cart-item">
+            <div class="cart-img"><img src="${item.image || ''}" data-pname="${(item.name || '').replace(/"/g, '&quot;')}" alt="${(item.name || '').replace(/"/g, '&quot;')}"></div>
+            <div style="flex:1">
+              <div class="item-name">${item.name}</div>
+              <div class="item-cat">${item.category||''}</div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div class="qty-ctrl">
+                  <button class="qty-btn" onclick="chg('${item._id}',-1)">−</button>
+                  <span class="qty-num">${item.quantity}</span>
+                  <button class="qty-btn" onclick="chg('${item._id}',1)">+</button>
+                </div>
+                <span style="font-weight:800;font-size:17px;color:var(--primary)">₹${item.price*item.quantity}</span>
+                <button onclick="rem('${item._id}')" style="background:none;border:none;cursor:pointer;font-size:18px">🗑️</button>
+              </div>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="sum-card">
+        <div class="card-title">Order Summary</div>
+        ${cart.map(i=>`<div class="sum-row"><span style="font-size:12px">${i.name} ×${i.quantity}</span><span>₹${i.price*i.quantity}</span></div>`).join('')}
+        <hr class="divider">
+        <div class="sum-row"><span>Subtotal</span><span>₹${sub.toFixed(2)}</span></div>
+        <div class="sum-row"><span>Delivery</span><span style="${del===0?'color:var(--success);font-weight:700':''}">${del===0?'FREE 🎉':'₹'+del}</span></div>
+        ${del>0?`<div style="background:#fef3c7;color:#92400e;padding:8px 12px;border-radius:8px;font-size:12px;text-align:center">Add ₹${500-sub} more for free delivery!</div>`:'<div class="free-del">✅ Free delivery applied!</div>'}
+        <hr class="divider">
+        <div class="sum-row" style="font-weight:900;font-size:18px"><span>Total</span><span style="color:var(--primary)">₹${total.toFixed(2)}</span></div>
+        <button class="btn btn-primary btn-full" style="margin-top:14px" onclick="window.location.href='/checkout'">Checkout →</button>
+        <a href="/products" style="display:block;text-align:center;margin-top:10px;color:var(--muted);font-size:13px;text-decoration:none">← Continue Shopping</a>
+      </div>
+    </div>`;
+  }
+
+  function chg(id,d){const cart=getCart(),i=cart.findIndex(x=>x._id===id);if(i<0)return;cart[i].quantity+=d;if(cart[i].quantity<1)cart.splice(i,1);saveCart(cart);render();}
+  function rem(id){saveCart(getCart().filter(i=>i._id!==id));render();}
+  render();
+</script>
+</body>
+</html>

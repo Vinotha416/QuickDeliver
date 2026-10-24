@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Products – QuickDeliver</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+  .cat-pill{padding:7px 14px;border-radius:20px;border:2px solid var(--border);background:#fff;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;transition:all .2s;white-space:nowrap}
+  .cat-pill.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .search-wrap{flex:1;min-width:200px;position:relative}
+  .search-wrap input{padding-left:38px;border-radius:20px}
+  .search-wrap .si{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px}
+  .add-btn{padding:9px 16px;border-radius:22px;border:none;background:var(--grad);color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;transition:all .2s;display:flex;align-items:center;gap:5px}
+  .add-btn:hover{opacity:.85;transform:translateY(-1px)}
+  .add-btn:disabled{background:#e2e8f0;color:#94a3b8;cursor:not-allowed;transform:none}
+  .disc-tag{position:absolute;top:10px;left:10px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px}
+  .stock-info{font-size:11px;color:var(--muted);margin-top:3px}
+</style>
+</head>
+<body>
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div class="app-shell">
+  <div id="sidebar" class="sidebar"></div>
+  <div class="main-area">
+    <div id="topbar" class="topbar"></div>
+    <div class="page-content">
+      <div class="page-header">
+        <h1>🛍️ Products</h1>
+        <p>Fresh groceries delivered to your door</p>
+      </div>
+      <div class="filter-bar">
+        <div class="search-wrap">
+          <span class="stat-icon">🔍</span>
+          <input type="text" id="searchIn" placeholder="Search products…" oninput="filterProds()">
+        </div>
+        <button class="cat-pill active" data-cat="all" onclick="setCat('all',this)">All</button>
+        <button class="cat-pill" data-cat="Groceries" onclick="setCat('Groceries',this)">🛒 Groceries</button>
+        <button class="cat-pill" data-cat="Fruits & Vegetables" onclick="setCat('Fruits & Vegetables',this)">🥦 Fruits & Veg</button>
+        <button class="cat-pill" data-cat="Dairy" onclick="setCat('Dairy',this)">🥛 Dairy</button>
+        <button class="cat-pill" data-cat="Snacks" onclick="setCat('Snacks',this)">🍿 Snacks</button>
+        <button class="cat-pill" data-cat="Beverages" onclick="setCat('Beverages',this)">☕ Beverages</button>
+        <button class="cat-pill" data-cat="Household" onclick="setCat('Household',this)">🧹 Household</button>
+      </div>
+      <div id="prodGrid" class="prod-grid"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/product-images.js"></script>
+<script>
+  const user = requireRole(['customer']);
+  if (!user) throw '';
+  initShell('customer', 'Products');
+
+  let allProds = [], curCat = 'all', curSearch = '';
+  const catParam = new URLSearchParams(location.search).get('category');
+
+  async function loadProds() {
+    const d = await api('GET', '/api/products');
+    allProds = d.products || [];
+    if (catParam) { curCat = catParam; document.querySelectorAll('.cat-pill').forEach(b => { b.classList.toggle('active', b.dataset.cat === catParam); }); }
+    render();
+  }
+
+  function setCat(c, btn) {
+    curCat = c;
+    document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  }
+
+  function filterProds() { curSearch = document.getElementById('searchIn').value.toLowerCase(); render(); }
+
+  function render() {
+    let list = allProds;
+    if (curCat !== 'all') list = list.filter(p => p.category === curCat);
+    if (curSearch) list = list.filter(p => p.name.toLowerCase().includes(curSearch) || p.description?.toLowerCase().includes(curSearch));
+    if (!list.length) {
+      document.getElementById('prodGrid').innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">🔍</div><h3>No products found</h3><p>Try a different search or category</p></div>`;
+      return;
+    }
+    document.getElementById('prodGrid').innerHTML = list.map(p => {
+      const oos = !p.isAvailable || p.stock === 0;
+      const discPrice = p.discount ? Math.round(p.price * (1 - p.discount / 100)) : p.price;
+      return `<div class="prod-card ${oos ? 'out-of-stock' : ''}">
+        <div class="prod-img">
+          <img src="${p.image || ''}" data-pname="${(p.name || '').replace(/"/g, '&quot;')}" alt="${(p.name || '').replace(/"/g, '&quot;')}">
+          ${oos ? '<div class="oos-banner"><span>OUT OF STOCK</span></div>' : ''}
+          ${p.discount && !oos ? `<div class="disc-tag">-${p.discount}%</div>` : ''}
+        </div>
+        <div class="prod-body">
+          <div class="prod-name">${p.name}</div>
+          <div class="prod-desc">${p.description || ''}</div>
+          <div class="prod-footer">
+            <div>
+              <div class="prod-price">₹${discPrice}</div>
+              ${p.discount ? `<div style="font-size:11px;color:var(--muted);text-decoration:line-through">₹${p.price}</div>` : ''}
+              <div class="stock-info">${oos ? '❌ Out of Stock' : `✅ In Stock (${p.stock})`}</div>
+            </div>
+            ${oos
+              ? `<button class="add-btn" disabled>Out of Stock</button>`
+              : `<button class="add-btn" onclick='addAndToast(${JSON.stringify({_id:p._id,name:p.name,price:discPrice,image:p.image||""})})'>+ Cart</button>`
+            }
+          </div>
+          <div class="prod-rating" style="margin-top:6px">⭐ ${p.rating||4.5} · ${p.category}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function addAndToast(p) {
+    addToCart(p);
+    toast(`${p.name} added to cart! 🛒`);
+  }
+
+  loadProds();
+</script>
+</body>
+</html>

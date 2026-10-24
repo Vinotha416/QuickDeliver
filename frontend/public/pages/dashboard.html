@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard – QuickDeliver</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  #bgCanvas{position:fixed;top:0;left:var(--sidebar-w);right:0;bottom:0;width:calc(100vw - var(--sidebar-w));height:100vh;z-index:0;pointer-events:none;opacity:.38}
+  @media(max-width:768px){#bgCanvas{left:0;width:100vw}}
+  .pi{position:relative;z-index:1}
+  .wc{background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#06b6d4);border-radius:var(--radius);padding:26px 30px;color:#fff;margin-bottom:20px;position:relative;overflow:hidden;box-shadow:0 8px 28px rgba(99,102,241,.35)}
+  .wc::before{content:'';position:absolute;top:-50px;right:-50px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06)}
+  .wc::after{content:'🚀';position:absolute;right:24px;top:50%;transform:translateY(-50%);font-size:68px;opacity:.14;line-height:1}
+  .wc h2{font-size:22px;font-weight:900;margin-bottom:5px}
+  .wc p{color:rgba(255,255,255,.82);font-size:14px}
+  .ws-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .ws{background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border-radius:10px;padding:8px 16px;text-align:center}
+  .ws strong{display:block;font-size:19px;font-weight:900}
+  .ws span{font-size:10px;color:rgba(255,255,255,.75);font-weight:500}
+  .pg-tabs{display:flex;gap:4px;background:#fff;border-radius:14px;padding:5px;box-shadow:var(--shadow);margin-bottom:20px;overflow-x:auto}
+  .pg-tab{flex:1;min-width:90px;padding:9px;border-radius:10px;border:none;background:transparent;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;color:var(--muted);transition:all .2s;white-space:nowrap;text-align:center}
+  .pg-tab.active{background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.3)}
+  .qa-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-bottom:20px}
+  .qa{background:#fff;border-radius:16px;padding:18px 10px;text-align:center;box-shadow:var(--shadow);transition:all .25s;border:2px solid transparent;text-decoration:none;display:block}
+  .qa:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--primary)}
+  .qa-icon{font-size:30px;margin-bottom:7px;display:block;transition:transform .25s}
+  .qa:hover .qa-icon{transform:scale(1.2) rotate(-8deg)}
+  .qa-label{font-weight:700;font-size:12px;color:var(--text)}
+  .qa-badge{position:absolute;top:7px;right:7px;background:var(--danger);color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:2px 6px;border:2px solid #fff}
+  .om{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #f1f5f9;flex-wrap:wrap;gap:6px}
+  .om:last-child{border-bottom:none}
+  .prof-av{width:76px;height:76px;border-radius:50%;background:var(--grad);color:#fff;font-size:32px;font-weight:900;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;box-shadow:0 6px 20px rgba(99,102,241,.35)}
+  .ni-item{display:flex;gap:11px;padding:13px;border-radius:12px;margin-bottom:7px;background:#f8fafc;border-left:3px solid var(--border);transition:transform .2s}
+  .ni-item.unread{background:#eff6ff;border-left-color:var(--primary)}
+  .ni-item:hover{transform:translateX(3px)}
+</style>
+</head>
+<body>
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div class="app-shell">
+  <div id="sidebar" class="sidebar"></div>
+  <div class="main-area">
+    <div id="topbar" class="topbar"></div>
+    <div class="page-content">
+      <canvas id="bgCanvas"></canvas>
+      <div class="pi">
+        <div class="pg-tabs">
+          <button class="pg-tab" id="tab-home"          onclick="goTab('home')">🏠 Home</button>
+          <button class="pg-tab" id="tab-notifications" onclick="goTab('notifications')">🔔 Notifications</button>
+          <button class="pg-tab" id="tab-profile"       onclick="goTab('profile')">👤 Profile</button>
+        </div>
+        <div id="tc"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+var user = requireRole(['customer']);
+if (!user) throw '';
+initShell('customer','My Dashboard');
+
+/* Canvas animation */
+(function(){
+  var cv=document.getElementById('bgCanvas'),ctx=cv.getContext('2d'),W,H,pts=[];
+  var COLS=['rgba(99,102,241,','rgba(139,92,246,','rgba(6,182,212,','rgba(16,185,129,'];
+  function resize(){var sw=window.innerWidth>768?260:0;W=cv.width=window.innerWidth-sw;H=cv.height=window.innerHeight;}
+  function mk(){return{x:Math.random()*W,y:Math.random()*H,r:Math.random()*55+15,dx:(Math.random()-.5)*.45,dy:(Math.random()-.5)*.45,c:COLS[Math.floor(Math.random()*COLS.length)],a:Math.random()*.14+.04,p:Math.random()*Math.PI*2,ps:Math.random()*.025+.008};}
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(function(p){
+      p.p+=p.ps;var a=p.a+Math.sin(p.p)*.07,r=p.r+Math.sin(p.p*.6)*10;
+      var g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
+      g.addColorStop(0,p.c+a+')');g.addColorStop(1,p.c+'0)');
+      ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+      p.x+=p.dx;p.y+=p.dy;
+      if(p.x<-r)p.x=W+r;if(p.x>W+r)p.x=-r;if(p.y<-r)p.y=H+r;if(p.y>H+r)p.y=-r;
+    });
+    for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){
+      var d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
+      if(d<190){ctx.beginPath();ctx.strokeStyle='rgba(99,102,241,'+(0.07*(1-d/190))+')';ctx.lineWidth=1;ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.stroke();}
+    }
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize);
+  resize();pts=Array.from({length:18},mk);draw();
+})();
+
+var curTab = new URLSearchParams(location.search).get('tab') || 'home';
+var activeEl = document.getElementById('tab-'+curTab);
+if (activeEl) activeEl.classList.add('active');
+else document.getElementById('tab-home').classList.add('active');
+
+function goTab(t) {
+  curTab = t;
+  document.querySelectorAll('.pg-tab').forEach(function(b){b.classList.remove('active');});
+  var el = document.getElementById('tab-'+t);
+  if (el) el.classList.add('active');
+  render();
+}
+
+async function loadHome() {
+  var d = await api('GET','/api/orders/my');
+  var orders = d.orders||[];
+  var active = orders.filter(function(o){return !['delivered','cancelled'].includes(o.status);});
+  var done   = orders.filter(function(o){return o.status==='delivered';});
+  var spent  = orders.filter(function(o){return o.paymentStatus==='paid';}).reduce(function(s,o){return s+o.totalAmount;},0);
+  var unread = orders.reduce(function(s,o){return s+(o.notifications?o.notifications.filter(function(n){return !n.isRead;}).length:0);},0);
+  var recent = orders.slice(0,5);
+
+  document.getElementById('tc').innerHTML =
+    '<div class="wc">' +
+      '<h2>Welcome back, '+user.name.split(' ')[0]+'! 👋</h2>' +
+      '<p>'+(active.length?'You have <strong>'+active.length+'</strong> active order'+(active.length>1?'s':'')+' on the way!':'Ready to order fresh groceries? 🛒')+'</p>' +
+      '<div class="ws-row">' +
+        '<div class="ws"><strong>'+orders.length+'</strong><span>Orders</span></div>' +
+        '<div class="ws"><strong>'+done.length+'</strong><span>Delivered</span></div>' +
+        '<div class="ws"><strong>₹'+spent.toFixed(0)+'</strong><span>Spent</span></div>' +
+        (unread?'<div class="ws" style="background:rgba(239,68,68,.22)"><strong>'+unread+'</strong><span>Alerts</span></div>':'') +
+      '</div>' +
+    '</div>' +
+    '<div class="qa-grid">' +
+      '<a href="/products" class="qa"><span class="qa-icon">🛍️</span><span class="qa-label">Shop Now</span></a>' +
+      '<a href="/cart" class="qa"><span class="qa-icon">🛒</span><span class="qa-label">My Cart</span></a>' +
+      '<a href="/orders" class="qa"><span class="qa-icon">📦</span><span class="qa-label">My Orders</span></a>' +
+      '<a href="javascript:void(0)" onclick="goTab(\'notifications\')" class="qa" style="position:relative">' +
+        '<span class="qa-icon">🔔</span><span class="qa-label">Alerts</span>' +
+        (unread?'<span class="qa-badge">'+unread+'</span>':'') +
+      '</a>' +
+      '<a href="/analytics" class="qa"><span class="qa-icon">🤖</span><span class="qa-label">AI Insights</span></a>' +
+      '<a href="javascript:void(0)" onclick="goTab(\'profile\')" class="qa"><span class="qa-icon">👤</span><span class="qa-label">Profile</span></a>' +
+    '</div>' +
+    '<div class="grid-2">' +
+      '<div class="card"><div class="card-title">📦 Recent Orders</div>' +
+        (!recent.length
+          ? '<div class="empty-state" style="padding:24px 0"><div class="icon" style="font-size:40px">🛒</div><p class="text-muted text-sm">No orders yet</p><a href="/products" class="btn btn-primary btn-sm" style="margin-top:8px">Start Shopping →</a></div>'
+          : recent.map(function(o){return '<div class="om"><div><div style="font-weight:700;font-size:13px">#'+(o.orderNumber||'').slice(-8)+'</div><div class="text-sm text-muted">'+new Date(o.createdAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})+'</div></div><div style="display:flex;align-items:center;gap:7px"><span class="badge status-'+o.status+'">'+o.status.replace(/_/g,' ')+'</span><a href="/order/'+o._id+'" style="font-size:12px;color:var(--primary);font-weight:700;text-decoration:none">View →</a></div></div>';}).join('') +
+            (orders.length>5?'<a href="/orders" style="display:block;text-align:center;margin-top:10px;font-size:13px;color:var(--primary);font-weight:700;text-decoration:none">See all '+orders.length+' orders →</a>':'')
+        ) +
+      '</div>' +
+      '<div class="card"><div class="card-title">📊 My Stats</div>' +
+        '<div class="info-row"><span>Total Orders</span><strong>'+orders.length+'</strong></div>' +
+        '<div class="info-row"><span>Delivered</span><strong style="color:var(--success)">✅ '+done.length+'</strong></div>' +
+        '<div class="info-row"><span>Active</span><strong style="color:var(--warning)">⏳ '+active.length+'</strong></div>' +
+        '<div class="info-row"><span>Cancelled</span><strong style="color:var(--danger)">'+orders.filter(function(o){return o.status==='cancelled';}).length+'</strong></div>' +
+        '<div class="info-row"><span>Total Spent</span><strong style="color:var(--primary)">₹'+spent.toFixed(2)+'</strong></div>' +
+        '<div class="info-row" style="border:none"><span>Avg Order</span><strong>₹'+(orders.length?(spent/orders.length).toFixed(0):'0')+'</strong></div>' +
+        '<a href="/orders" class="btn btn-primary btn-full" style="margin-top:12px">📦 View All Orders</a>' +
+      '</div>' +
+    '</div>';
+}
+
+async function loadNotifications() {
+  var d = await api('GET','/api/orders/notifications/my');
+  var notifs = d.notifications||[];
+  var icons = {weather:'🌧️',traffic:'🚦',delay:'⏰',status:'📦',reschedule:'🔄',general:'📢',ai_suggestion:'🤖'};
+  document.getElementById('tc').innerHTML =
+    '<div class="page-header"><h1>🔔 Notifications</h1><p>Order updates & agent alerts</p></div>' +
+    '<div class="card">' +
+      (!notifs.length
+        ? '<div class="empty-state"><div class="icon">🔕</div><h3>No notifications yet</h3><p>Order updates will appear here</p></div>'
+        : notifs.map(function(n){return '<div class="ni-item'+(n.isRead?'':' unread')+'">' +
+            '<div style="font-size:24px;flex-shrink:0;margin-top:2px">'+(icons[n.type]||'📢')+'</div>' +
+            '<div style="flex:1">' +
+              '<div style="font-weight:600;font-size:13px;line-height:1.5">'+n.message+'</div>' +
+              '<div style="font-size:11px;color:#94a3b8;margin-top:3px">'+new Date(n.sentAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+(n.orderNumber?' • #'+n.orderNumber.slice(-8):'')+'</div>' +
+              (n.orderId?'<a href="/order/'+n.orderId+'" style="font-size:12px;color:var(--primary);font-weight:700;text-decoration:none;margin-top:3px;display:inline-block">View Order →</a>':'') +
+            '</div>' +
+            (!n.isRead?'<div style="width:8px;height:8px;background:var(--primary);border-radius:50%;flex-shrink:0;margin-top:4px"></div>':'') +
+          '</div>';}).join('')
+      ) +
+    '</div>';
+}
+
+function loadProfile() {
+  document.getElementById('tc').innerHTML =
+    '<div class="page-header"><h1>👤 My Profile</h1><p>Manage your account details</p></div>' +
+    '<div style="max-width:520px">' +
+      '<div class="card">' +
+        '<div style="text-align:center;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border)">' +
+          '<div class="prof-av">'+(user.name[0]||'?').toUpperCase()+'</div>' +
+          '<div style="font-weight:900;font-size:19px">'+user.name+'</div>' +
+          '<span class="badge badge-blue" style="margin-top:5px">Customer</span>' +
+        '</div>' +
+        '<div class="form-group"><label>Full Name</label><input id="pName" value="'+user.name+'"></div>' +
+        '<div class="form-group"><label>Email <span class="text-muted text-sm">(cannot change)</span></label><input value="'+user.email+'" disabled style="background:#f8fafc;color:#94a3b8"></div>' +
+        '<div class="form-group"><label>Phone</label><input id="pPhone" value="'+(user.phone||'')+'" placeholder="9876543210"></div>' +
+        '<div class="form-group"><label>Delivery Address</label><input id="pAddr" value="'+(user.address||'')+'" placeholder="123 Main Street, City"></div>' +
+        '<div style="display:flex;gap:9px;flex-wrap:wrap">' +
+          '<button class="btn btn-primary" onclick="saveProfile()">💾 Save Changes</button>' +
+          '<button class="btn btn-outline" onclick="doLogout()">🚪 Logout</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card" style="margin-top:14px">' +
+        '<div class="card-title">🔐 Account Info</div>' +
+        '<div class="info-row"><span>Status</span><strong style="color:var(--success)">✅ Active</strong></div>' +
+        '<div class="info-row"><span>Role</span><strong>Customer</strong></div>' +
+        '<div class="info-row" style="border:none"><span>Email</span><strong>'+user.email+'</strong></div>' +
+      '</div>' +
+    '</div>';
+}
+
+async function saveProfile() {
+  try {
+    var name  = document.getElementById('pName').value.trim();
+    var phone = document.getElementById('pPhone').value.trim();
+    var addr  = document.getElementById('pAddr').value.trim();
+    var d = await api('PUT','/api/auth/profile',{name:name,phone:phone,address:addr});
+    setAuth(getToken(),Object.assign({},user,d.user));
+    toast('Profile updated!');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function render() {
+  document.getElementById('tc').innerHTML = '<div class="spinner"></div>';
+  if (curTab === 'notifications')     loadNotifications();
+  else if (curTab === 'profile')      loadProfile();
+  else                                loadHome();
+}
+
+render();
+</script>
+</body>
+</html>

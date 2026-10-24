@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Analytics – QuickDeliver</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .ana-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+  .ana-card{background:#fff;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);text-align:center;border-top:3px solid var(--primary)}
+  .ana-val{font-size:28px;font-weight:900;color:var(--primary);margin-bottom:4px}
+  .ana-lbl{font-size:12px;color:var(--muted);font-weight:500}
+  .bar-wrap{margin-bottom:10px}
+  .bar-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+  .bar-track{height:10px;background:#f1f5f9;border-radius:6px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:6px;transition:width .6s ease}
+  .prod-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9}
+  .prod-row:last-child{border-bottom:none}
+  .prod-rank{width:22px;height:22px;border-radius:50%;background:var(--grad);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ai-insight{background:linear-gradient(135deg,#eff6ff,#f0f4ff);border:1px solid #bfdbfe;border-radius:14px;padding:16px 18px;margin-bottom:20px}
+  .ai-insight-title{font-weight:800;font-size:14px;color:#1d4ed8;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .insight-chip{display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;margin:3px}
+  .month-bar{display:flex;align-items:flex-end;gap:6px;height:100px;padding:0 4px}
+  .m-bar{flex:1;background:linear-gradient(to top,#6366f1,#8b5cf6);border-radius:4px 4px 0 0;min-height:4px;position:relative;cursor:pointer;transition:opacity .2s}
+  .m-bar:hover{opacity:.8}
+  .m-bar .m-tip{position:absolute;top:-28px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;font-size:10px;padding:2px 6px;border-radius:5px;white-space:nowrap;display:none}
+  .m-bar:hover .m-tip{display:block}
+  .m-labels{display:flex;gap:6px;padding:4px 4px 0;margin-bottom:12px}
+  .m-label{flex:1;text-align:center;font-size:10px;color:var(--muted)}
+  .slot-pie{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .slot-seg{flex:1;min-width:80px;text-align:center;padding:12px 8px;border-radius:12px;background:#f8fafc;border:2px solid var(--border)}
+  .slot-seg.top{background:linear-gradient(135deg,#eff6ff,#dbeafe);border-color:var(--primary)}
+  .slot-pct{font-size:22px;font-weight:900;color:var(--primary)}
+  .slot-name{font-size:11px;color:var(--muted);margin-top:3px}
+</style>
+</head>
+<body>
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div class="app-shell">
+  <div id="sidebar" class="sidebar"></div>
+  <div class="main-area">
+    <div id="topbar" class="topbar"></div>
+    <div class="page-content">
+      <div class="page-header">
+        <h1>📊 My Delivery Analytics</h1>
+        <p>AI-powered insights from your order history</p>
+      </div>
+      <div id="content"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+const user = requireRole(['customer']);
+if (!user) throw '';
+initShell('customer','My Analytics');
+
+async function load() {
+  try {
+    const [anaRes, aiRes, routeRes] = await Promise.all([
+      api('GET', '/api/ai/analytics'),
+      api('GET', '/api/ai/suggest-slot'),
+      api('GET', '/api/ai/route-info')
+    ]);
+    const a = anaRes.analytics;
+    const ai = aiRes.suggestion;
+    const route = routeRes.routeInfo;
+    render(a, ai, route);
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><h3>${e.message}</h3></div>`;
+  }
+}
+
+function render(a, ai, route) {
+  const total = a.slotDistribution.Morning + a.slotDistribution.Afternoon + a.slotDistribution.Evening || 1;
+  const slotPct = {
+    Morning:   Math.round(a.slotDistribution.Morning / total * 100),
+    Afternoon: Math.round(a.slotDistribution.Afternoon / total * 100),
+    Evening:   Math.round(a.slotDistribution.Evening / total * 100)
+  };
+  const topSlot = Object.entries(slotPct).sort((x,y)=>y[1]-x[1])[0]?.[0] || 'Morning';
+
+  // Monthly spend chart
+  const months = Object.entries(a.monthlySpend || {});
+  const maxSpend = Math.max(...months.map(m=>m[1]), 1);
+
+  const insightList = [
+    ai.pastOrderCount > 0 ? `🕐 You prefer ${topSlot} deliveries` : '🆕 New customer — place your first order!',
+    ai.preferredDay !== 'Any' ? `📅 Most orders on ${ai.preferredDay}s` : '📅 No day preference yet',
+    `💰 Avg order value: ₹${a.avgOrderValue}`,
+    a.successRate > 0 ? `✅ ${a.successRate}% orders delivered successfully` : '📦 No deliveries yet',
+    `⏱️ Avg delivery time: ${a.avgDeliveryTime} min`,
+    route ? `${route.traffic.emoji} Current traffic: ${route.traffic.label}` : ''
+  ].filter(Boolean);
+
+  document.getElementById('content').innerHTML = `
+    <!-- AI Insight Panel -->
+    <div class="ai-insight">
+      <div class="ai-insight-title">🤖 AI Smart Insights <span style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600">${ai.confidence}% confidence</span></div>
+      <div style="font-size:13px;color:#1e40af;margin-bottom:10px">${ai.reason}</div>
+      <div>${insightList.map(i=>`<span class="insight-chip">${i}</span>`).join('')}</div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="ana-grid">
+      <div class="ana-card"><div class="ana-val">${a.totalOrders}</div><div class="ana-lbl">Total Orders</div></div>
+      <div class="ana-card" style="border-color:var(--success)"><div class="ana-val" style="color:var(--success)">${a.delivered}</div><div class="ana-lbl">Delivered</div></div>
+      <div class="ana-card" style="border-color:var(--warning)"><div class="ana-val" style="color:var(--warning)">₹${a.totalSpent.toFixed(0)}</div><div class="ana-lbl">Total Spent</div></div>
+      <div class="ana-card" style="border-color:var(--info)"><div class="ana-val" style="color:var(--info)">₹${a.avgOrderValue}</div><div class="ana-lbl">Avg Order</div></div>
+      <div class="ana-card" style="border-color:var(--secondary)"><div class="ana-val" style="color:var(--secondary)">${a.avgDeliveryTime}m</div><div class="ana-lbl">Avg Delivery</div></div>
+      <div class="ana-card" style="border-color:var(--danger)"><div class="ana-val" style="color:var(--danger)">${a.cancelled}</div><div class="ana-lbl">Cancelled</div></div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Slot Distribution -->
+      <div class="card">
+        <div class="card-title">⏰ Preferred Time Slots</div>
+        <div class="slot-pie">
+          ${[
+            {name:'Morning',   emoji:'🌅', pct:slotPct.Morning,   count:a.slotDistribution.Morning},
+            {name:'Afternoon', emoji:'☀️', pct:slotPct.Afternoon, count:a.slotDistribution.Afternoon},
+            {name:'Evening',   emoji:'🌆', pct:slotPct.Evening,   count:a.slotDistribution.Evening}
+          ].map(s=>`<div class="slot-seg ${s.name===topSlot?'top':''}">
+            <div style="font-size:24px">${s.emoji}</div>
+            <div class="slot-pct">${s.pct}%</div>
+            <div class="slot-name">${s.name}</div>
+            <div style="font-size:10px;color:var(--muted)">${s.count} orders</div>
+            ${s.name===topSlot?`<div style="font-size:10px;color:var(--primary);font-weight:700;margin-top:3px">⭐ Favourite</div>`:''}
+          </div>`).join('')}
+        </div>
+        <div style="margin-top:16px">
+          ${[
+            {name:'Morning',   pct:slotPct.Morning,   color:'#6366f1'},
+            {name:'Afternoon', pct:slotPct.Afternoon, color:'#f59e0b'},
+            {name:'Evening',   pct:slotPct.Evening,   color:'#8b5cf6'}
+          ].map(s=>`<div class="bar-wrap">
+            <div class="bar-label"><span>${s.name}</span><span>${s.pct}%</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${s.pct}%;background:${s.color}"></div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Top Products -->
+      <div class="card">
+        <div class="card-title">🏆 Most Ordered Products</div>
+        ${a.topProducts.length ? a.topProducts.map((p,i)=>`
+          <div class="prod-row">
+            <div class="prod-rank">${i+1}</div>
+            <div style="flex:1"><div style="font-weight:600;font-size:13px">${p.name}</div><div style="font-size:11px;color:var(--muted)">${p.count} units ordered</div></div>
+            <div class="bar-track" style="width:80px"><div class="bar-fill" style="width:${Math.round(p.count/a.topProducts[0].count*100)}%;background:var(--grad)"></div></div>
+          </div>`).join('')
+        : `<div class="empty-state" style="padding:30px 0"><div class="icon">📦</div><p class="text-muted">No orders yet</p></div>`}
+      </div>
+    </div>
+
+    <!-- Monthly Spend Chart -->
+    ${months.length ? `<div class="card" style="margin-top:20px">
+      <div class="card-title">💰 Monthly Spend</div>
+      <div class="month-bar">
+        ${months.map(([m,v])=>`<div class="m-bar" style="height:${Math.max(Math.round(v/maxSpend*100),4)}%">
+          <div class="m-tip">₹${v.toLocaleString()}</div>
+        </div>`).join('')}
+      </div>
+      <div class="m-labels">${months.map(([m])=>`<div class="m-label">${m}</div>`).join('')}</div>
+    </div>` : ''}
+
+    <!-- Route & System Info -->
+    <div class="grid-2" style="margin-top:20px">
+      <div class="card">
+        <div class="card-title">🗺️ Route Optimization</div>
+        <div class="info-row"><span>Traffic Level</span><strong>${route?.traffic.emoji} ${route?.traffic.label||'—'}</strong></div>
+        <div class="info-row"><span>Weather</span><strong>${route?.weather.emoji} ${route?.weather.label||'—'}</strong></div>
+        <div class="info-row"><span>Est. Delivery</span><strong>~${route?.traffic.eta||35} min</strong></div>
+        <div class="info-row"><span>Weather Impact</span><strong>${route?.weather.impact||'—'}</strong></div>
+        <div class="info-row" style="border:none"><span>Delivery Density</span><strong>${route?.deliveryDensity?.length||0} active slots</strong></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🎯 Customer Preferences</div>
+        <div class="info-row"><span>Preferred Slot</span><strong>${topSlot} ${topSlot==='Morning'?'🌅':topSlot==='Afternoon'?'☀️':'🌆'}</strong></div>
+        <div class="info-row"><span>Preferred Day</span><strong>${ai.preferredDay}</strong></div>
+        <div class="info-row"><span>Orders Analysed</span><strong>${ai.pastOrderCount}</strong></div>
+        <div class="info-row"><span>Success Rate</span><strong style="color:var(--success)">${a.successRate}%</strong></div>
+        <div class="info-row"><span>Rescheduled</span><strong>${a.rescheduled}</strong></div>
+        <div class="info-row" style="border:none"><span>AI Confidence</span><strong>${ai.confidence}%</strong></div>
+      </div>
+    </div>
+
+    <!-- Data Acquisition Section -->
+    <div class="card" style="margin-top:20px;border-left:4px solid var(--info)">
+      <div class="card-title">📡 Data Acquisition Overview</div>
+      <div class="grid-3">
+        <div style="text-align:center;padding:14px">
+          <div style="font-size:32px;margin-bottom:6px">📦</div>
+          <div style="font-weight:700;font-size:13px">Historical Delivery Data</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">${a.delivered} past deliveries analysed</div>
+        </div>
+        <div style="text-align:center;padding:14px">
+          <div style="font-size:32px;margin-bottom:6px">👤</div>
+          <div style="font-weight:700;font-size:13px">Customer Preferences</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Slot & day patterns tracked</div>
+        </div>
+        <div style="text-align:center;padding:14px">
+          <div style="font-size:32px;margin-bottom:6px">🚦</div>
+          <div style="font-weight:700;font-size:13px">Real-time Logistics</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">${route?.traffic.label} · ${route?.weather.label}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+load();
+</script>
+</body>
+</html>

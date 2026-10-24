@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Login – QuickDeliver</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  html,body{height:100%;overflow:hidden}
+  .wrap{display:grid;grid-template-columns:1fr 1fr;height:100vh}
+  @media(max-width:780px){.wrap{grid-template-columns:1fr}.bg-side{display:none}}
+  .bg-side{position:relative;overflow:hidden}
+  .bg-side img{width:100%;height:100%;object-fit:cover}
+  .bg-ov{position:absolute;inset:0;background:linear-gradient(135deg,rgba(79,70,229,.9),rgba(139,92,246,.8));display:flex;flex-direction:column;align-items:center;justify-content:center;padding:52px;text-align:center;color:#fff}
+  .bg-ov h2{font-size:36px;font-weight:900;line-height:1.15;margin-bottom:14px}
+  .bg-ov p{font-size:15px;color:rgba(255,255,255,.82);line-height:1.75;max-width:340px;margin-bottom:36px}
+  .feat{display:flex;flex-direction:column;gap:12px;width:100%;max-width:320px;text-align:left}
+  .feat-row{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.13);backdrop-filter:blur(8px);padding:13px 16px;border-radius:13px}
+  .form-side{display:flex;align-items:center;justify-content:center;background:#fff;padding:32px 24px;overflow-y:auto}
+  .box{width:100%;max-width:420px}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:32px}
+  .bicon{width:48px;height:48px;border-radius:14px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:26px}
+  .bname{font-size:22px;font-weight:900;color:#1e1b4b}
+  .ttl{font-size:28px;font-weight:900;color:#0f172a;margin-bottom:5px}
+  .sub{color:#64748b;font-size:15px;margin-bottom:26px}
+  .iw{position:relative}
+  .iw input{padding-left:44px}
+  .iw .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:17px;pointer-events:none}
+  .err{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;padding:11px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;display:none}
+  .inf{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;padding:11px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;display:none}
+  .succ{background:#d1fae5;border:1px solid #6ee7b7;color:#065f46;padding:11px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;display:none}
+  .foot{text-align:center;margin-top:18px;font-size:14px;color:#64748b}
+  .foot a{color:var(--primary);font-weight:700;text-decoration:none}
+  .demo{background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:18px}
+  .demo h4{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+  .demo-row{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)}
+  .demo-row:last-child{border-bottom:none}
+  .demo-row .dr{color:var(--primary);font-weight:600;font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bg-side">
+    <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=1000&q=80" alt="">
+    <div class="bg-ov">
+      <h2>Fresh Groceries,<br>Delivered On Time</h2>
+      <p>Schedule deliveries, choose time slots, and track every step door to door.</p>
+      <div class="feat">
+        <div class="feat-row"><span style="font-size:22px">⏰</span><span style="font-size:13px;font-weight:500">Choose your delivery time slot</span></div>
+        <div class="feat-row"><span style="font-size:22px">🚴</span><span style="font-size:13px;font-weight:500">Real-time agent tracking & alerts</span></div>
+        <div class="feat-row"><span style="font-size:22px">🌧️</span><span style="font-size:13px;font-weight:500">Live weather & traffic updates</span></div>
+        <div class="feat-row"><span style="font-size:22px">⭐</span><span style="font-size:13px;font-weight:500">Rate your delivery experience</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="form-side">
+    <div class="box">
+      <div class="brand"><div class="bicon">🚀</div><div class="bname">QuickDeliver</div></div>
+      <div class="ttl">Welcome back!</div>
+      <div class="sub">Sign in to continue to your dashboard</div>
+      <div id="inf" class="inf">🔒 Please log in to access that page</div>
+      <div id="succ" class="succ">🎉 Account created! Please log in to continue.</div>
+      <div id="err" class="err"></div>
+      <div class="form-group"><label>Email Address</label><div class="iw"><span class="ic">📧</span><input type="email" id="email" placeholder="your@email.com" autocomplete="email"></div></div>
+      <div class="form-group"><label>Password</label><div class="iw"><span class="ic">🔑</span><input type="password" id="password" placeholder="Enter your password"></div></div>
+      <button class="btn btn-primary btn-full btn-lg" id="loginBtn" onclick="doLogin()">Sign In →</button>
+      <div class="foot">No account? <a href="/register">Create one free</a></div>
+      <div class="demo">
+        <h4>🔑 Demo Credentials</h4>
+        <div class="demo-row"><span>Admin</span><span class="dr">vvinotha751@gmail.com / Vinotha_1234</span></div>
+        <div class="demo-row"><span>Agent</span><span class="dr">ravi@agent.com / Agent@1234</span></div>
+        <div class="demo-row"><span>Customer</span><span class="dr">Register a new account</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  redirectIfLoggedIn();
+  const p = new URLSearchParams(location.search);
+  if (p.get('r')) document.getElementById('inf').style.display = 'block';
+  if (p.get('registered')) document.getElementById('succ').style.display = 'block';
+  async function doLogin() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('loginBtn');
+    document.getElementById('err').style.display = 'none';
+    if (!email || !password) return showErr('Please enter email and password');
+    btn.textContent = 'Signing in…'; btn.disabled = true;
+    try {
+      const data = await api('POST', '/api/auth/login', { email, password });
+      setAuth(data.token, data.user);
+      window.location.href = ROLE_HOME[data.user.role] || '/';
+    } catch(e) { showErr(e.message); btn.textContent = 'Sign In →'; btn.disabled = false; }
+  }
+  function showErr(m) { const b = document.getElementById('err'); b.textContent = m; b.style.display = 'block'; }
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+</script>
+</body>
+</html>

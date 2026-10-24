@@ -1,0 +1,3 @@
+# Netlify: deploy the static frontend. No build step needed.
+[build]
+  publish = "frontend/public"

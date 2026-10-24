@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin – QuickDeliver</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;background:#fff;border-radius:14px;padding:5px;box-shadow:var(--shadow);margin-bottom:20px}
+  .tab{padding:8px 12px;border-radius:10px;border:none;background:transparent;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;color:var(--muted);transition:all .2s;white-space:nowrap}
+  .tab.active{background:var(--grad);color:#fff}
+  .oc{background:#fff;border-radius:12px;padding:16px;margin-bottom:10px;box-shadow:var(--shadow)}
+  .fp{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+  .fp button{padding:5px 11px;border-radius:14px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600;transition:all .2s}
+  .fp button.a{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .selx{padding:7px 10px;border-radius:8px;border:1px solid var(--border);font-size:12px;font-family:inherit;cursor:pointer;background:#fff}
+  .ag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:14px}
+  .ag-card{background:#fff;border-radius:14px;padding:18px;text-align:center;box-shadow:var(--shadow)}
+  .ag-av{width:48px;height:48px;border-radius:50%;background:var(--grad);color:#fff;font-size:20px;font-weight:900;display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+  .pr-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9}
+  .pr-row:last-child{border-bottom:none}
+  .pr-th{width:40px;height:40px;border-radius:8px;overflow:hidden;background:#f1f5f9;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px}
+  .pr-th img{width:100%;height:100%;object-fit:cover}
+  .arch-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9}
+  .arch-row:last-child{border-bottom:none}
+  .bar-track{height:9px;background:#f1f5f9;border-radius:6px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:6px}
+  .al-card{background:#fff;border-radius:12px;padding:14px;margin-bottom:9px;box-shadow:var(--shadow);border-left:4px solid var(--warning)}
+</style>
+</head>
+<body>
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div class="app-shell">
+  <div id="sidebar" class="sidebar"></div>
+  <div class="main-area">
+    <div id="topbar" class="topbar"></div>
+    <div class="page-content">
+      <div class="tabs" id="tabRow"></div>
+      <div id="tc"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Product Modal -->
+<div class="modal-overlay" id="prodModal" style="display:none">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="pmTitle">Add Product</div><button class="modal-close" onclick="closePM()">✕</button></div>
+    <div class="form-group"><label>Name *</label><input id="pmName"></div>
+    <div class="form-group"><label>Description *</label><textarea id="pmDesc" rows="2"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Price ₹ *</label><input type="number" id="pmPrice"></div>
+      <div class="form-group"><label>Discount %</label><input type="number" id="pmDisc" value="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Category *</label>
+        <select id="pmCat"><option>Groceries</option><option>Fruits &amp; Vegetables</option><option>Dairy</option><option>Snacks</option><option>Beverages</option><option>Household</option></select>
+      </div>
+      <div class="form-group"><label>Stock</label><input type="number" id="pmStock" value="100"></div>
+    </div>
+    <div class="form-group"><label>Image URL</label><input id="pmImg" placeholder="https://..."></div>
+    <div class="form-group">
+      <label>Availability</label>
+      <select id="pmAvail"><option value="true">✅ In Stock</option><option value="false">❌ Out of Stock</option></select>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="closePM()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProd()">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/product-images.js"></script>
+<script>
+var _ua = requireRole(['admin']);
+if (!_ua) throw '';
+initShell('admin','Admin Dashboard');
+
+var TABS = [
+  {id:'overview',   icon:'📊', label:'Overview'},
+  {id:'orders',     icon:'📦', label:'Orders'},
+  {id:'payments',   icon:'💳', label:'Payments'},
+  {id:'feedback',   icon:'⭐', label:'Feedback'},
+  {id:'alerts',     icon:'🌧️', label:'Agent Alerts'},
+  {id:'system',     icon:'🏗️', label:'System Arch.'},
+  {id:'predictive', icon:'🤖', label:'Predictive'},
+  {id:'customers',  icon:'👥', label:'Customers'},
+  {id:'agents',     icon:'🚴', label:'Agents'},
+  {id:'products',   icon:'🛍️', label:'Products'}
+];
+
+var curTab = new URLSearchParams(location.search).get('tab') || 'overview';
+var agentsList = [], ordFilter = 'all', editProdId = null;
+
+document.getElementById('tabRow').innerHTML = TABS.map(function(t){
+  return '<button class="tab'+(curTab===t.id?' active':'')+'" onclick="goTab(\''+t.id+'\',this)">'+t.icon+' '+t.label+'</button>';
+}).join('');
+
+function goTab(id, btn) {
+  curTab = id;
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+  if (btn) btn.classList.add('active');
+  load();
+}
+
+async function load() {
+  document.getElementById('tc').innerHTML = '<div class="spinner"></div>';
+  try {
+    if (curTab==='overview')   { var d=await api('GET','/api/admin/dashboard'); renderOverview(d); }
+    else if (curTab==='orders') {
+      var res = await Promise.all([api('GET','/api/admin/orders'+(ordFilter!=='all'?'?status='+ordFilter:'')), api('GET','/api/admin/agents')]);
+      agentsList = res[1].agents||[];
+      renderOrders(res[0].orders||[]);
+    }
+    else if (curTab==='payments')   { var d=await api('GET','/api/admin/payments');      renderPayments(d.orders||[]); }
+    else if (curTab==='feedback')   { var d=await api('GET','/api/admin/feedback');      renderFeedback(d.orders||[]); }
+    else if (curTab==='alerts')     { var d=await api('GET','/api/admin/agent-alerts');  renderAlerts(d.alerts||[]); }
+    else if (curTab==='system')     { var d=await api('GET','/api/ai/system-stats');     renderSystem(d.systemStats||{}); }
+    else if (curTab==='predictive') { var d=await api('GET','/api/ai/system-stats');     renderPredictive(d.systemStats||{}); }
+    else if (curTab==='customers')  { var d=await api('GET','/api/admin/customers');     renderCustomers(d.customers||[]); }
+    else if (curTab==='agents')     { var d=await api('GET','/api/admin/agents');        renderAgentList(d.agents||[]); }
+    else if (curTab==='products')   { var d=await api('GET','/api/products');            renderProducts(d.products||[]); }
+  } catch(e) {
+    document.getElementById('tc').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Error loading data</h3><p>'+e.message+'</p><button class="btn btn-primary btn-sm" onclick="load()">Try Again</button></div>';
+  }
+}
+
+/* ── OVERVIEW ── */
+function renderOverview(d) {
+  var s = d.stats||{};
+  var recent = d.recentOrders||[];
+  var fbList = d.recentFeedback||[];
+  document.getElementById('tc').innerHTML =
+    '<div class="stats-grid">' +
+      '<div class="stat-card"><div class="stat-icon">📦</div><div><div class="stat-val">'+(s.totalOrders||0)+'</div><div class="stat-label">Total Orders</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--warning)"><div class="stat-icon">⏳</div><div><div class="stat-val" style="color:var(--warning)">'+(s.pendingOrders||0)+'</div><div class="stat-label">Pending</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--success)"><div class="stat-icon">✅</div><div><div class="stat-val" style="color:var(--success)">'+(s.deliveredOrders||0)+'</div><div class="stat-label">Delivered</div></div></div>' +
+      '<div class="stat-card" style="border-color:#f59e0b"><div class="stat-icon">💰</div><div><div class="stat-val" style="color:#f59e0b">₹'+(s.revenue||0).toLocaleString()+'</div><div class="stat-label">Revenue</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--info)"><div class="stat-icon">👥</div><div><div class="stat-val" style="color:var(--info)">'+(s.totalCustomers||0)+'</div><div class="stat-label">Customers</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--secondary)"><div class="stat-icon">🚴</div><div><div class="stat-val" style="color:var(--secondary)">'+(s.totalAgents||0)+'</div><div class="stat-label">Agents</div></div></div>' +
+    '</div>' +
+    '<div class="grid-2">' +
+      '<div class="card"><div class="card-title">📦 Recent Orders</div>' +
+        recent.map(function(o){return '<div class="info-row"><div><strong style="font-size:13px">#'+(o.orderNumber||'').slice(-8)+'</strong><br><span style="font-size:11px;color:var(--muted)">'+(o.user&&o.user.name||'—')+'</span></div><div style="display:flex;gap:6px;align-items:center"><span class="badge status-'+o.status+'">'+o.status.replace(/_/g,' ')+'</span><strong>₹'+o.totalAmount+'</strong></div></div>';}).join('') +
+      '</div>' +
+      '<div class="card"><div class="card-title">⭐ Recent Feedback</div>' +
+        (fbList.length ? fbList.map(function(o){return '<div class="info-row"><div><strong style="font-size:13px">'+(o.user&&o.user.name||'—')+'</strong>'+(o.agent?'<span style="font-size:11px;color:var(--muted)"> via '+o.agent.name+'</span>':'')+'</div><span style="font-size:16px">'+'⭐'.repeat(o.feedback.rating)+'</span></div>'+(o.feedback.comment?'<div style="font-size:12px;color:var(--muted);font-style:italic;padding:3px 0 8px">"'+o.feedback.comment+'"</div>':'');}).join('')
+        : '<p style="color:var(--muted);font-size:13px">No feedback yet</p>') +
+      '</div>' +
+    '</div>';
+}
+
+/* ── ORDERS ── */
+function renderOrders(list) {
+  var statusOpts = ['all','placed','confirmed','assigned','picked_up','in_transit','out_for_delivery','delivered','rescheduled','cancelled'];
+  var pills = statusOpts.map(function(s){return '<button class="'+(ordFilter===s?'a':'')+'" onclick="ordFilter=\''+s+'\';load()">'+s.replace(/_/g,' ')+'</button>';}).join('');
+  var cards = list.map(function(o){
+    var agentSelect = !o.agent
+      ? '<select class="selx" onchange="if(this.value)assignAgent(\''+o._id+'\',this.value)"><option value="">Assign Agent…</option>' +
+        agentsList.map(function(a){return '<option value="'+a._id+'">'+a.name+' ('+a.agentStatus+')</option>';}).join('') + '</select>'
+      : '<span class="badge badge-green">🚴 '+(o.agent.name||'')+'</span>';
+    return '<div class="oc">' +
+      '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:7px">' +
+        '<div><strong style="font-size:14px">#'+(o.orderNumber||'').slice(-10)+'</strong> <span class="badge status-'+o.status+'">'+o.status.replace(/_/g,' ')+'</span></div>' +
+        '<span style="font-size:12px;color:var(--muted)">'+new Date(o.createdAt).toLocaleDateString('en-IN')+'</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px">' +
+        '<span>👤 '+(o.user&&o.user.name||'—')+'</span>' +
+        '<span>📞 '+(o.phone||'—')+'</span>' +
+        '<span>💳 '+(o.paymentMethod||'').toUpperCase()+'</span>' +
+        '<span>💰 ₹'+o.totalAmount+'</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">📍 '+(o.deliveryAddress||'—')+' &nbsp;|&nbsp; ⏰ '+((o.timeSlot&&o.timeSlot.date)||'—')+' '+((o.timeSlot&&o.timeSlot.slot)||'')+'</div>' +
+      '<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">' +
+        '<select class="selx" onchange="if(this.value)updStatus(\''+o._id+'\',this.value)">' +
+          '<option value="">Update Status…</option>' +
+          ['confirmed','assigned','picked_up','in_transit','out_for_delivery','delivered','cancelled'].map(function(s){return '<option>'+s.replace(/_/g,' ')+'</option>';}).join('') +
+        '</select>' +
+        agentSelect +
+        '<a href="/order/'+o._id+'" class="btn btn-outline btn-sm" target="_blank">View →</a>' +
+      '</div>' +
+      (o.feedback&&o.feedback.rating?'<div style="background:#fef3c7;color:#92400e;padding:7px 11px;border-radius:8px;font-size:12px;margin-top:8px">⭐ '+o.feedback.rating+'/5'+(o.feedback.comment?' — "'+o.feedback.comment+'"':'')+'</div>':'') +
+    '</div>';
+  }).join('');
+  document.getElementById('tc').innerHTML = '<div class="fp">' + pills + '</div>' +
+    (list.length ? cards : '<div class="empty-state"><div class="icon">📦</div><h3>No orders found</h3></div>');
+}
+
+/* ── PAYMENTS ── */
+function renderPayments(orders) {
+  var paid = orders.filter(function(o){return o.paymentStatus==='paid';}).reduce(function(s,o){return s+o.totalAmount;},0);
+  var rows = orders.map(function(o){
+    return '<tr><td><a href="/order/'+o._id+'" style="color:var(--primary);font-weight:700;text-decoration:none">'+(o.orderNumber||'').slice(-8)+'</a></td>' +
+      '<td>'+(o.user&&o.user.name||'—')+'</td>' +
+      '<td><span class="badge badge-blue">'+(o.paymentMethod||'').toUpperCase()+'</span></td>' +
+      '<td><strong>₹'+o.totalAmount+'</strong></td>' +
+      '<td><span class="badge '+(o.paymentStatus==='paid'?'badge-green':'badge-yellow')+'">'+o.paymentStatus+'</span></td>' +
+      '<td style="font-size:11px;color:var(--muted)">'+(o.paymentDetails&&o.paymentDetails.transactionId||'—')+'</td>' +
+      '<td style="font-size:12px">'+new Date(o.createdAt).toLocaleDateString('en-IN')+'</td></tr>';
+  }).join('');
+  document.getElementById('tc').innerHTML =
+    '<div class="stats-grid">' +
+      '<div class="stat-card"><div class="stat-icon">💰</div><div><div class="stat-val">₹'+paid.toLocaleString()+'</div><div class="stat-label">Total Revenue</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--success)"><div class="stat-icon">✅</div><div><div class="stat-val" style="color:var(--success)">'+orders.filter(function(o){return o.paymentStatus==='paid';}).length+'</div><div class="stat-label">Paid</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--warning)"><div class="stat-icon">⏳</div><div><div class="stat-val" style="color:var(--warning)">'+orders.filter(function(o){return o.paymentStatus==='pending';}).length+'</div><div class="stat-label">COD Pending</div></div></div>' +
+    '</div>' +
+    '<div class="card"><div class="card-title">💳 All Payments</div><div class="table-wrap">' +
+    '<table class="data-table"><thead><tr><th>Order</th><th>Customer</th><th>Method</th><th>Amount</th><th>Status</th><th>Transaction ID</th><th>Date</th></tr></thead>' +
+    '<tbody>'+rows+'</tbody></table></div></div>';
+}
+
+/* ── FEEDBACK ── */
+function renderFeedback(orders) {
+  var avg = orders.length ? (orders.reduce(function(s,o){return s+o.feedback.rating;},0)/orders.length).toFixed(1) : '—';
+  document.getElementById('tc').innerHTML =
+    '<div class="stats-grid">' +
+      '<div class="stat-card"><div class="stat-icon">⭐</div><div><div class="stat-val">'+avg+'</div><div class="stat-label">Avg Rating</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--success)"><div class="stat-icon">💬</div><div><div class="stat-val" style="color:var(--success)">'+orders.length+'</div><div class="stat-label">Total Reviews</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--warning)"><div class="stat-icon">🌟</div><div><div class="stat-val" style="color:var(--warning)">'+orders.filter(function(o){return o.feedback.rating>=4;}).length+'</div><div class="stat-label">4★ & Above</div></div></div>' +
+    '</div>' +
+    (orders.length ? orders.map(function(o){
+      return '<div class="card" style="margin-bottom:10px;border-left:4px solid var(--warning)">' +
+        '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">' +
+          '<div><strong>#'+(o.orderNumber||'').slice(-8)+'</strong> <span style="color:var(--muted);font-size:13px">by '+(o.user&&o.user.name||'—')+'</span></div>' +
+          '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:18px">'+'⭐'.repeat(o.feedback.rating)+'</span>' +
+            (o.feedback.agentRating?'<span style="font-size:12px;color:var(--muted)">Agent: '+'⭐'.repeat(o.feedback.agentRating)+'</span>':'') +
+          '</div>' +
+        '</div>' +
+        (o.feedback.comment?'<div style="background:#fef3c7;border-radius:10px;padding:9px 13px;font-style:italic;font-size:13px">"'+o.feedback.comment+'"</div>':'') +
+        (o.agent?'<div style="font-size:12px;color:var(--muted);margin-top:6px">🚴 Delivered by '+o.agent.name+'</div>':'') +
+        '<div style="font-size:11px;color:#94a3b8;margin-top:4px">'+new Date(o.feedback.submittedAt).toLocaleString('en-IN')+'</div>' +
+      '</div>';
+    }).join('') : '<div class="empty-state"><div class="icon">⭐</div><h3>No feedback yet</h3></div>');
+}
+
+/* ── ALERTS ── */
+function renderAlerts(alerts) {
+  var typeClass = {weather:'badge-blue',traffic:'badge-yellow',delay:'badge-purple',reschedule:'badge-gray',general:'badge-gray'};
+  document.getElementById('tc').innerHTML =
+    '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#1d4ed8">' +
+      'ℹ️ <strong>View Only.</strong> These alerts were sent by delivery agents to customers.' +
+    '</div>' +
+    (!alerts.length
+      ? '<div class="empty-state"><div class="icon">🔕</div><h3>No agent alerts yet</h3></div>'
+      : alerts.map(function(a){
+          var icons = {weather:'🌧️',traffic:'🚦',delay:'⏰',reschedule:'🔄',general:'📢'};
+          return '<div class="al-card">' +
+            '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px">' +
+              '<div style="display:flex;align-items:center;gap:10px">' +
+                '<span style="font-size:24px">'+(icons[a.type]||'📢')+'</span>' +
+                '<div><div style="font-weight:700;font-size:14px">'+a.message+'</div>' +
+                '<div style="font-size:12px;color:var(--muted);margin-top:2px">Order #'+(a.orderNumber||'').slice(-8)+' &nbsp;|&nbsp; Customer: <strong>'+(a.customerName||'—')+'</strong></div></div>' +
+              '</div>' +
+              '<span class="badge '+(typeClass[a.type]||'badge-gray')+'">'+a.type+'</span>' +
+            '</div>' +
+            '<div style="font-size:12px;color:var(--muted)">🚴 <strong>'+(a.agentName||'Agent')+'</strong> &nbsp;·&nbsp; '+new Date(a.sentAt).toLocaleString('en-IN')+'</div>' +
+          '</div>';
+        }).join('')
+    );
+}
+
+/* ── SYSTEM ARCHITECTURE ── */
+function renderSystem(s) {
+  var mkRows = function(arr) {
+    return arr.map(function(i){
+      return '<div class="arch-row"><span style="font-size:20px">'+i.icon+'</span><div><div style="font-weight:600;font-size:13px">'+i.name+'</div><div style="font-size:11px;color:var(--muted)">'+i.desc+'</div></div></div>';
+    }).join('');
+  };
+  document.getElementById('tc').innerHTML =
+    '<div class="page-header"><h1>🏗️ System Architecture</h1><p>AI-Based Customized Time Slot Delivery System</p></div>' +
+    '<div class="stats-grid">' +
+      '<div class="stat-card"><div class="stat-icon">📦</div><div><div class="stat-val">'+(s.totalOrders||0)+'</div><div class="stat-label">Total Orders</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--success)"><div class="stat-icon">✅</div><div><div class="stat-val" style="color:var(--success)">'+(s.delivered||0)+'</div><div class="stat-label">Delivered</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--info)"><div class="stat-icon">📊</div><div><div class="stat-val" style="color:var(--info)">'+(s.successRate||0)+'%</div><div class="stat-label">Success Rate</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--danger)"><div class="stat-icon">❌</div><div><div class="stat-val" style="color:var(--danger)">'+(s.cancelled||0)+'</div><div class="stat-label">Cancelled</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--warning)"><div class="stat-icon">🔄</div><div><div class="stat-val" style="color:var(--warning)">'+(s.rescheduled||0)+'</div><div class="stat-label">Rescheduled</div></div></div>' +
+      '<div class="stat-card" style="border-color:var(--secondary)"><div class="stat-icon">👥</div><div><div class="stat-val" style="color:var(--secondary)">'+(s.totalUsers||0)+'</div><div class="stat-label">Customers</div></div></div>' +
+    '</div>' +
+    '<div class="grid-2">' +
+      '<div class="card"><div class="card-title">⚙️ Backend Frameworks</div>' + mkRows([
+        {icon:'🟢',name:'Node.js + Express',desc:'REST API backend framework'},
+        {icon:'🍃',name:'MongoDB + Mongoose',desc:'NoSQL database & ODM'},
+        {icon:'🔐',name:'JWT Authentication',desc:'Secure token-based auth'},
+        {icon:'💳',name:'Payment Gateways',desc:'UPI, Card, GPay, COD'},
+        {icon:'☁️',name:'Cloud Ready',desc:'Deploy on any cloud provider'},
+        {icon:'🔒',name:'Secure APIs',desc:'Role-based access control'}
+      ]) + '</div>' +
+      '<div class="card"><div class="card-title">🔄 Route Optimization</div>' + mkRows([
+        {icon:'🚦',name:'Traffic Consideration',desc:'Real-time traffic monitoring'},
+        {icon:'🌧️',name:'Weather Impact',desc:'Weather-based delivery adjustments'},
+        {icon:'📦',name:'Delivery Density',desc:'Slot load balancing across agents'},
+        {icon:'⏱️',name:'ETA Calculation',desc:'Dynamic arrival time estimates'},
+        {icon:'🗺️',name:'Smart Routing',desc:'Optimised delivery path suggestions'},
+        {icon:'📊',name:'Historical Analysis',desc:'Past delivery time patterns'}
+      ]) + '</div>' +
+      '<div class="card"><div class="card-title">👤 Customer Interaction</div>' + mkRows([
+        {icon:'📱',name:'Delivery Management Interface',desc:'Full order management dashboard'},
+        {icon:'🔔',name:'Real-time Notifications',desc:'Live status & agent alerts'},
+        {icon:'🔄',name:'Schedule Modification',desc:'Reschedule delivery anytime'},
+        {icon:'🤖',name:'Automated Rescheduling',desc:'AI suggests best alternative slot'},
+        {icon:'⭐',name:'Feedback System',desc:'Post-delivery rating & comments'},
+        {icon:'📊',name:'Customer Analytics',desc:'Personal delivery insights page'}
+      ]) + '</div>' +
+      '<div class="card"><div class="card-title">📡 Data Acquisition</div>' + mkRows([
+        {icon:'📦',name:'Historical Delivery Data',desc:(s.delivered||0)+' past deliveries tracked'},
+        {icon:'👤',name:'Customer Preferences',desc:'Slot, day & frequency patterns'},
+        {icon:'🚦',name:'Real-time Logistics Data',desc:'Live traffic & weather feeds'},
+        {icon:'💳',name:'Payment Analytics',desc:'Method preferences & success rates'},
+        {icon:'⏱️',name:'Delivery Time Logs',desc:'Actual vs estimated time tracking'},
+        {icon:'📊',name:'Slot Demand Patterns',desc:'Peak & off-peak slot analysis'}
+      ]) + '</div>' +
+    '</div>';
+}
+
+/* ── PREDICTIVE MODELS ── */
+function renderPredictive(s) {
+  var slotData  = s.slotData||[];
+  var totalSlot = slotData.reduce(function(sum,d){return sum+d.count;},0)||1;
+  var revData   = s.revenueData||[];
+
+  var slotBars = slotData.map(function(sd){
+    var key = (sd._id||'').includes('Morning')?'Morning':(sd._id||'').includes('Afternoon')?'Afternoon':'Evening';
+    var pct = Math.round(sd.count/totalSlot*100);
+    var col = key==='Morning'?'#6366f1':key==='Afternoon'?'#f59e0b':'#8b5cf6';
+    var emoji = key==='Morning'?'🌅':key==='Afternoon'?'☀️':'🌆';
+    return '<div style="margin-bottom:12px">' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>'+emoji+' '+key+'</span><strong>'+sd.count+' orders ('+pct+'%)</strong></div>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+col+'"></div></div>' +
+    '</div>';
+  }).join('') || '<p style="color:var(--muted);font-size:13px">No order data yet — place some orders first.</p>';
+
+  var prefRows = [
+    {icon:'📊',label:'Preference Tracking',val:(s.totalUsers||0)+' customers profiled'},
+    {icon:'🔄',label:'Rescheduling Rate',val:(s.totalOrders?Math.round((s.rescheduled||0)/s.totalOrders*100):0)+'% rescheduled'},
+    {icon:'✅',label:'Delivery Success',val:(s.successRate||0)+'% success rate'},
+    {icon:'🤖',label:'AI Suggestions',val:'Available at checkout'},
+    {icon:'📡',label:'Data Points',val:'6 per customer order'},
+    {icon:'🎯',label:'Personalisation',val:'Per-customer slot model'}
+  ].map(function(r){
+    return '<div class="info-row"><span>'+r.icon+' '+r.label+'</span><strong>'+r.val+'</strong></div>';
+  }).join('');
+
+  var revChart = '';
+  if (revData.length) {
+    var maxR = Math.max.apply(null, revData.map(function(r){return r.total;}));
+    maxR = maxR || 1;
+    var bars = revData.map(function(r){
+      return '<div style="flex:1;background:linear-gradient(to top,#6366f1,#8b5cf6);border-radius:4px 4px 0 0;height:'+Math.max(Math.round(r.total/maxR*100),4)+'%;position:relative" title="₹'+(r.total||0).toLocaleString()+' ('+r.count+' orders)"></div>';
+    }).join('');
+    var labels = revData.map(function(r){return '<div style="flex:1;text-align:center;font-size:10px;color:var(--muted)">'+(r._id||'')+'</div>';}).join('');
+    revChart = '<div class="card" style="margin-top:20px"><div class="card-title">💰 Revenue Trend</div>' +
+      '<div style="display:flex;align-items:flex-end;gap:8px;height:110px;margin-bottom:6px">'+bars+'</div>' +
+      '<div style="display:flex;gap:8px">'+labels+'</div></div>';
+  }
+
+  document.getElementById('tc').innerHTML =
+    '<div class="page-header"><h1>🤖 Predictive Models</h1><p>AI-Based Dynamic Time-slot Scheduling & Customer Preference Management</p></div>' +
+    '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:13px 16px;margin-bottom:16px;font-size:13px;color:#1e40af">' +
+      '🤖 The AI analyses each customer\'s past orders to suggest the best delivery slot with up to <strong>92% confidence</strong>, based on preferred time, day patterns, delivery success rate, and current slot availability.' +
+    '</div>' +
+    '<div class="grid-2">' +
+      '<div class="card"><div class="card-title">🕐 Dynamic Time-slot Scheduling</div>'+slotBars+'</div>' +
+      '<div class="card"><div class="card-title">👤 Customer Preference Management</div>'+prefRows+'</div>' +
+    '</div>' + revChart;
+}
+
+/* ── CUSTOMERS ── */
+function renderCustomers(list) {
+  var rows = list.map(function(u){
+    return '<tr><td><strong>'+(u.name||'')+'</strong></td><td>'+(u.email||'')+'</td><td>'+(u.phone||'—')+'</td>' +
+      '<td style="font-size:12px;max-width:160px">'+(u.address||'—')+'</td>' +
+      '<td style="font-size:12px">'+new Date(u.createdAt).toLocaleDateString('en-IN')+'</td>' +
+      '<td><span style="color:'+(u.isActive?'var(--success)':'var(--danger)')+';font-weight:700">'+(u.isActive?'Active':'Inactive')+'</span></td></tr>';
+  }).join('');
+  document.getElementById('tc').innerHTML =
+    '<div class="card"><div class="card-title">👥 All Customers ('+list.length+')</div>' +
+    '<div class="table-wrap"><table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th>Joined</th><th>Status</th></tr></thead>' +
+    '<tbody>'+rows+'</tbody></table></div></div>';
+}
+
+/* ── AGENTS ── */
+function renderAgentList(list) {
+  var cards = list.map(function(a){
+    return '<div class="ag-card">' +
+      '<div class="ag-av">'+(a.name&&a.name[0]||'A')+'</div>' +
+      '<div style="font-weight:800;font-size:15px">'+(a.name||'')+'</div>' +
+      '<div style="font-size:12px;color:var(--muted);margin:4px 0">'+(a.email||'')+'</div>' +
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">📞 '+(a.phone||'—')+'</div>' +
+      '<span class="badge '+(a.agentStatus==='available'?'badge-green':a.agentStatus==='busy'?'badge-yellow':'badge-gray')+'">'+(a.agentStatus||'offline')+'</span>' +
+    '</div>';
+  }).join('');
+  document.getElementById('tc').innerHTML = '<div class="ag-grid">'+cards+'</div>';
+}
+
+/* ── PRODUCTS ── */
+function renderProducts(list) {
+  var rows = list.map(function(p){
+    return '<div class="pr-row">' +
+      '<div class="pr-th">'+'<img src="'+(p.image||'')+'" data-pname="'+String(p.name||'').replace(/"/g,'&quot;')+'">'+'</div>' +
+      '<div style="flex:1"><div style="font-weight:700;font-size:13px">'+(p.name||'')+'</div>' +
+        '<div style="font-size:11px;color:var(--muted)">'+(p.category||'')+' | Stock: '+(p.stock||0)+
+          (p.isAvailable===false?' | <span style="color:var(--danger);font-weight:700">OUT OF STOCK</span>':'')+'</div></div>' +
+      '<div style="text-align:right;margin-right:10px">' +
+        '<div style="font-weight:800;color:var(--primary)">₹'+(p.price||0)+'</div>' +
+        (p.discount?'<div style="font-size:11px;color:var(--danger)">-'+p.discount+'%</div>':'') +
+      '</div>' +
+      '<div style="display:flex;gap:5px">' +
+        '<button class="btn btn-ghost btn-sm" onclick=\'editPM('+JSON.stringify(p)+')\'>✏️</button>' +
+        '<button class="btn btn-danger btn-sm" onclick="delProd(\''+p._id+'\',\''+((p.name||'').replace(/'/g,"\\'"))+'\')">🗑️</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  document.getElementById('tc').innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">' +
+      '<div style="font-weight:800">'+list.length+' Products</div>' +
+      '<button class="btn btn-primary btn-sm" onclick="openPM()">+ Add Product</button>' +
+    '</div>' +
+    '<div class="card">'+rows+'</div>';
+}
+
+/* ── PRODUCT MODAL ── */
+function openPM(p) {
+  editProdId = p ? p._id : null;
+  document.getElementById('pmTitle').textContent = p ? 'Edit Product' : 'Add Product';
+  document.getElementById('pmName').value  = p ? (p.name||'')             : '';
+  document.getElementById('pmDesc').value  = p ? (p.description||'')      : '';
+  document.getElementById('pmPrice').value = p ? (p.price||'')            : '';
+  document.getElementById('pmDisc').value  = p ? (p.discount||0)          : 0;
+  document.getElementById('pmCat').value   = p ? (p.category||'Groceries'): 'Groceries';
+  document.getElementById('pmStock').value = p ? (p.stock||100)           : 100;
+  document.getElementById('pmImg').value   = p ? (p.image||'')            : '';
+  document.getElementById('pmAvail').value = p ? (p.isAvailable===false?'false':'true') : 'true';
+  document.getElementById('prodModal').style.display = 'flex';
+}
+function editPM(p) { openPM(p); }
+function closePM() { document.getElementById('prodModal').style.display = 'none'; }
+
+async function saveProd() {
+  var body = {
+    name:        document.getElementById('pmName').value.trim(),
+    description: document.getElementById('pmDesc').value.trim(),
+    price:       +document.getElementById('pmPrice').value,
+    discount:    +document.getElementById('pmDisc').value,
+    category:    document.getElementById('pmCat').value,
+    stock:       +document.getElementById('pmStock').value,
+    image:       document.getElementById('pmImg').value.trim(),
+    isAvailable: document.getElementById('pmAvail').value !== 'false',
+    rating:      4.5
+  };
+  if (!body.name || !body.description || !body.price) return toast('Name, description and price required','error');
+  try {
+    if (editProdId) await api('PUT','/api/admin/products/'+editProdId,body);
+    else            await api('POST','/api/admin/products',body);
+    toast(editProdId?'Product updated!':'Product added!');
+    closePM(); load();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function delProd(id, name) {
+  if (!confirm('Delete "'+name+'"?')) return;
+  try { await api('DELETE','/api/admin/products/'+id); toast('Deleted'); load(); }
+  catch(e) { toast(e.message,'error'); }
+}
+
+async function updStatus(id, status) {
+  try { await api('PUT','/api/admin/orders/'+id+'/status',{status:status.replace(/ /g,'_')}); toast('Status updated!'); load(); }
+  catch(e) { toast(e.message,'error'); }
+}
+
+async function assignAgent(orderId, agentId) {
+  try { await api('PUT','/api/admin/orders/'+orderId+'/assign',{agentId:agentId}); toast('Agent assigned!'); load(); }
+  catch(e) { toast(e.message,'error'); }
+}
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Register – QuickDeliver</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  html,body{height:100%;overflow:hidden}
+  .wrap{display:grid;grid-template-columns:1fr 1fr;height:100vh}
+  @media(max-width:780px){.wrap{grid-template-columns:1fr}.bg-side{display:none}}
+  .bg-side{position:relative;overflow:hidden}
+  .bg-side img{width:100%;height:100%;object-fit:cover}
+  .bg-ov{position:absolute;inset:0;background:linear-gradient(135deg,rgba(16,185,129,.88),rgba(6,182,212,.8));display:flex;flex-direction:column;align-items:center;justify-content:center;padding:52px;color:#fff;text-align:center}
+  .bg-ov h2{font-size:34px;font-weight:900;line-height:1.2;margin-bottom:14px}
+  .bg-ov p{font-size:14px;color:rgba(255,255,255,.85);line-height:1.75;max-width:310px;margin-bottom:30px}
+  .steps{display:flex;flex-direction:column;gap:14px;width:100%;max-width:295px;text-align:left}
+  .step-r{display:flex;align-items:center;gap:12px}
+  .sn{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .form-side{display:flex;align-items:center;justify-content:center;background:#fff;padding:22px 24px;overflow-y:auto}
+  .box{width:100%;max-width:490px}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+  .bicon{width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,#10b981,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:23px}
+  .bname{font-size:20px;font-weight:900;color:#1e1b4b}
+  .ttl{font-size:24px;font-weight:900;color:#0f172a;margin-bottom:4px}
+  .sub{color:#64748b;font-size:14px;margin-bottom:16px}
+  .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .rc{border:2px solid var(--border);border-radius:13px;padding:15px 12px;cursor:pointer;text-align:center;transition:all .2s;background:#fff}
+  .rc .ri{font-size:28px;display:block;margin-bottom:6px}
+  .rc .rn{font-weight:700;font-size:13px;color:#374151}
+  .rc .rd{font-size:11px;color:#94a3b8;margin-top:3px}
+  .rc.sel{border-color:var(--primary);background:#f0f4ff}
+  .rc.sel .rn{color:var(--primary-dark)}
+  .err{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px;display:none}
+  .role-note{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;font-size:12px;color:#1d4ed8;margin-bottom:12px;display:none}
+  .foot{text-align:center;margin-top:12px;font-size:14px;color:#64748b}
+  .foot a{color:var(--primary);font-weight:700;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bg-side">
+    <img src="https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=1000&q=80" alt="">
+    <div class="bg-ov">
+      <h2>Join QuickDeliver Today</h2>
+      <p>Get fresh groceries delivered on your schedule. Free — no credit card needed.</p>
+      <div class="steps">
+        <div class="step-r"><div class="sn">1</div><span style="font-size:13px;font-weight:500">Choose your role (customer or agent)</span></div>
+        <div class="step-r"><div class="sn">2</div><span style="font-size:13px;font-weight:500">Fill details → Login to your dashboard</span></div>
+        <div class="step-r"><div class="sn">3</div><span style="font-size:13px;font-weight:500">Browse 26+ fresh daily products</span></div>
+        <div class="step-r"><div class="sn">4</div><span style="font-size:13px;font-weight:500">Schedule delivery & track live</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="form-side">
+    <div class="box">
+      <div class="brand"><div class="bicon">🚀</div><div class="bname">QuickDeliver</div></div>
+      <div class="ttl">Create your account</div>
+      <div class="sub">Select your role, then fill in your details</div>
+      <div id="err" class="err"></div>
+      <div style="margin-bottom:12px">
+        <label style="font-weight:700;font-size:13px;display:block;margin-bottom:8px">I am registering as:</label>
+        <div class="role-grid">
+          <div class="rc sel" id="rc-customer" onclick="selectRole('customer',this)">
+            <span class="ri">🛒</span><div class="rn">Customer</div><div class="rd">Browse & order products</div>
+          </div>
+          <div class="rc" id="rc-agent" onclick="selectRole('agent',this)">
+            <span class="ri">🚴</span><div class="rn">Delivery Agent</div><div class="rd">Deliver orders to customers</div>
+          </div>
+        </div>
+        <div id="roleNote" class="role-note">✅ After registration you will be taken to the <strong id="roleDash">Login Page</strong> to sign in.</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Full Name *</label><input id="name" type="text" placeholder="John Doe"></div>
+        <div class="form-group"><label>Phone</label><input id="phone" type="tel" placeholder="9876543210"></div>
+      </div>
+      <div class="form-group"><label>Email Address *</label><input id="email" type="email" placeholder="your@email.com"></div>
+      <div class="form-group" id="addrField"><label>Delivery Address</label><input id="address" type="text" placeholder="123 Main Street, City"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Password *</label><input id="pwd" type="password" placeholder="Min 6 characters"></div>
+        <div class="form-group"><label>Confirm Password *</label><input id="cpwd" type="password" placeholder="Repeat password"></div>
+      </div>
+      <button class="btn btn-primary btn-full btn-lg" id="regBtn" onclick="doRegister()">Create Account →</button>
+      <div class="foot">Already have an account? <a href="/login">Sign in here</a></div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  redirectIfLoggedIn();
+  let role = 'customer';
+  document.getElementById('roleNote').style.display = 'block';
+  function selectRole(r, el) {
+    role = r;
+    document.querySelectorAll('.rc').forEach(c => c.classList.remove('sel'));
+    el.classList.add('sel');
+    document.getElementById('addrField').style.display = r === 'agent' ? 'none' : '';
+    document.getElementById('roleNote').style.display = 'block';
+  }
+  async function doRegister() {
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const pwd = document.getElementById('pwd').value;
+    const cpwd = document.getElementById('cpwd').value;
+    const phone = document.getElementById('phone').value.trim();
+    const address = document.getElementById('address').value.trim();
+    const btn = document.getElementById('regBtn');
+    document.getElementById('err').style.display = 'none';
+    if (!name || !email || !pwd) return showErr('Name, email and password are required');
+    if (pwd !== cpwd) return showErr('Passwords do not match');
+    if (pwd.length < 6) return showErr('Password must be at least 6 characters');
+    btn.textContent = 'Creating…'; btn.disabled = true;
+    try {
+      await api('POST', '/api/auth/register', { name, email, password: pwd, phone, address, role });
+      window.location.href = '/login?registered=1';
+    } catch(e) { showErr(e.message); btn.textContent = 'Create Account →'; btn.disabled = false; }
+  }
+  function showErr(m) { const b = document.getElementById('err'); b.textContent = m; b.style.display = 'block'; }
+</script>
+</body>
+</html>

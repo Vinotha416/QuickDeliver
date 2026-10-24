@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checkout – QuickDeliver</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .co-layout{display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start}
+  @media(max-width:768px){.co-layout{grid-template-columns:1fr}}
+  .date-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .date-btn{padding:8px 14px;border-radius:9px;border:2px solid var(--border);background:#fff;cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;transition:all .2s}
+  .date-btn.sel{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .slot-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px}
+  .slot-card{border:2px solid var(--border);border-radius:12px;padding:14px 8px;text-align:center;cursor:pointer;transition:all .2s;background:#fff;position:relative}
+  .slot-card .s-icon{font-size:26px;display:block;margin-bottom:5px}
+  .slot-card .s-name{font-weight:700;font-size:13px}
+  .slot-card .s-time{font-size:11px;color:var(--muted);margin-top:2px}
+  .slot-card.sel{background:linear-gradient(135deg,#1e1b4b,var(--primary));color:#fff;border-color:var(--primary)}
+  .slot-card.sel .s-time{color:#a5b4fc}
+  .slot-card .avail-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%}
+  .slot-card .ai-tag{position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;white-space:nowrap;letter-spacing:.3px}
+  .ai-banner{background:linear-gradient(135deg,#eff6ff,#f0f4ff);border:1px solid #bfdbfe;border-radius:14px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px}
+  .ai-icon{font-size:28px;flex-shrink:0;margin-top:2px}
+  .ai-title{font-weight:800;font-size:13px;color:#1d4ed8;margin-bottom:3px}
+  .ai-text{font-size:12px;color:#1e40af;line-height:1.6}
+  .ai-conf{display:inline-block;background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;margin-top:5px}
+  .route-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:12px}
+  .pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+  .pay-card{border:2px solid var(--border);border-radius:12px;padding:14px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:all .2s;background:#fff}
+  .pay-card .p-icon{font-size:26px;flex-shrink:0}
+  .pay-card .p-name{font-weight:700;font-size:13px}
+  .pay-card .p-desc{font-size:11px;color:var(--muted)}
+  .pay-card.sel{background:linear-gradient(135deg,#1e1b4b,var(--primary));color:#fff;border-color:var(--primary)}
+  .pay-card.sel .p-desc{color:#a5b4fc}
+  .review-row{display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid #f1f5f9}
+  .review-row:last-child{border-bottom:none}
+  .sum-side{background:#fff;border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);position:sticky;top:20px}
+  .sum-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px}
+  .btn-back{background:#f1f5f9;color:var(--text);border:none;padding:10px 18px;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px}
+  .err-box{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;display:none}
+</style>
+</head>
+<body>
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div class="app-shell">
+  <div id="sidebar" class="sidebar"></div>
+  <div class="main-area">
+    <div id="topbar" class="topbar"></div>
+    <div class="page-content">
+      <div class="page-header"><h1>Checkout</h1></div>
+      <div class="step-bar" id="stepBar"></div>
+      <div id="errBox" class="err-box"></div>
+      <div class="co-layout">
+        <div id="stepContent"></div>
+        <div class="sum-side">
+          <div class="card-title">Order Summary</div>
+          <div id="sumItems"></div>
+          <hr class="divider">
+          <div class="sum-row"><span>Subtotal</span><span id="sSub"></span></div>
+          <div class="sum-row"><span>Delivery</span><span id="sDel"></span></div>
+          <hr class="divider">
+          <div class="sum-row" style="font-weight:900;font-size:16px"><span>Total</span><span id="sTotal" style="color:var(--primary)"></span></div>
+          <div id="aiSummary" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  const _u = requireRole(['customer']); if (!_u) throw '';
+  initShell('customer','Checkout');
+  const cart = getCart(); if (!cart.length) { window.location.href='/cart'; throw ''; }
+  const user = getUser();
+
+  let step = 1;
+  let del  = { address: user.address||'', phone: user.phone||'', email: user.email||'' };
+  let slot = { date: '', slotId: '' };
+  let pay  = { method:'', upiId:'', cardNum:'', cardExp:'', cardCvv:'' };
+  let aiSuggestion = null, routeInfo = null;
+
+  const slots = [
+    { id:'Morning',   icon:'🌅', name:'Morning',   time:'7AM – 11AM' },
+    { id:'Afternoon', icon:'☀️', name:'Afternoon', time:'12PM – 4PM' },
+    { id:'Evening',   icon:'🌆', name:'Evening',   time:'5PM – 9PM' }
+  ];
+  const dates = Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()+i+1); return d; });
+  const sub = cartTotal(), delivery = sub>500?0:40, total = sub+delivery;
+
+  document.getElementById('sumItems').innerHTML = cart.map(i=>
+    `<div class="sum-row"><span style="font-size:12px">${i.name} ×${i.quantity}</span><span>₹${i.price*i.quantity}</span></div>`
+  ).join('');
+  document.getElementById('sSub').textContent   = '₹'+sub.toFixed(2);
+  document.getElementById('sDel').textContent   = delivery===0?'FREE':'₹'+delivery;
+  document.getElementById('sTotal').textContent = '₹'+total.toFixed(2);
+
+  // Load AI suggestion + route info on page load
+  (async()=>{
+    try {
+      const [aiRes, routeRes] = await Promise.all([
+        api('GET','/api/ai/suggest-slot'),
+        api('GET','/api/ai/route-info')
+      ]);
+      aiSuggestion = aiRes.suggestion;
+      routeInfo    = routeRes.routeInfo;
+      // Show AI tip in summary sidebar
+      document.getElementById('aiSummary').innerHTML = `
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:11px;padding:11px 13px;font-size:12px">
+          <div style="font-weight:700;color:#1d4ed8;margin-bottom:4px">🤖 AI Recommendation</div>
+          <div style="color:#1e40af">Best slot: <strong>${aiSuggestion.bestSlot}</strong> (${aiSuggestion.confidence}% confidence)</div>
+          ${routeInfo ? `<div style="color:#1e40af;margin-top:3px">${routeInfo.traffic.emoji} ${routeInfo.traffic.label} · ETA ~${routeInfo.traffic.eta} min</div>` : ''}
+        </div>`;
+    } catch(e) { /* AI optional — don't block checkout */ }
+  })();
+
+  const stepNames = ['Delivery','Time Slot','Payment','Review'];
+  function updateStepBar() {
+    document.getElementById('stepBar').innerHTML = stepNames.map((n,i)=>{
+      const s = i+1;
+      return `<div class="step-item">
+        <div class="step-circle ${s<step?'done':s===step?'active':''}">${s<step?'✓':s}</div>
+        <span class="step-label ${s===step?'active':''}">${n}</span>
+      </div>${i<3?'<div class="step-line"></div>':''}`;
+    }).join('');
+  }
+
+  function showErr(m) { const b=document.getElementById('errBox'); b.textContent=m; b.style.display='block'; setTimeout(()=>b.style.display='none',4000); }
+
+  function renderStep() {
+    updateStepBar();
+    const c = document.getElementById('stepContent');
+
+    if (step===1) {
+      c.innerHTML = `<div class="card">
+        <div class="card-title">📍 Delivery Details</div>
+        ${routeInfo ? `<div class="route-card">
+          <strong>🗺️ Route Info:</strong> ${routeInfo.traffic.emoji} ${routeInfo.traffic.label} &nbsp;|&nbsp;
+          ${routeInfo.weather.emoji} ${routeInfo.weather.label} &nbsp;|&nbsp;
+          ⏱️ ETA ~${routeInfo.traffic.eta} min
+          <div style="color:#065f46;margin-top:3px;font-size:11px">${routeInfo.weather.impact}</div>
+        </div>` : ''}
+        <div class="form-group"><label>Delivery Address *</label><input id="fAddr" value="${del.address}" placeholder="Full delivery address"></div>
+        <div class="form-row">
+          <div class="form-group"><label>Phone *</label><input id="fPhone" value="${del.phone}" placeholder="9876543210"></div>
+          <div class="form-group"><label>Email *</label><input id="fEmail" value="${del.email}" placeholder="you@email.com"></div>
+        </div>
+        <button class="btn btn-primary" onclick="next1()">Continue → Time Slot</button>
+      </div>`;
+    }
+
+    else if (step===2) {
+      const avail = aiSuggestion?.slotAvailability || [];
+      const availMap = {};
+      avail.forEach(a => { availMap[a.slot] = a; });
+      const dotColor = { green:'#10b981', yellow:'#f59e0b', red:'#ef4444' };
+
+      c.innerHTML = `<div class="card">
+        <div class="card-title">⏰ Choose Delivery Slot</div>
+        ${aiSuggestion ? `<div class="ai-banner">
+          <div class="ai-icon">🤖</div>
+          <div>
+            <div class="ai-title">AI Smart Slot Suggestion</div>
+            <div class="ai-text">${aiSuggestion.reason}</div>
+            <span class="ai-conf">✨ ${aiSuggestion.confidence}% confidence · ${aiSuggestion.pastOrderCount} past orders analysed</span>
+          </div>
+        </div>` : ''}
+        <div class="form-group"><label>Select Date *</label>
+          <div class="date-grid">${dates.map(d=>{
+            const s=d.toISOString().split('T')[0];
+            const l=d.toLocaleDateString('en-IN',{weekday:'short',month:'short',day:'numeric'});
+            return `<button class="date-btn${slot.date===s?' sel':''}" onclick="setDate('${s}',this)">${l}</button>`;
+          }).join('')}</div>
+        </div>
+        <div class="form-group" id="slotGroup" style="${slot.date?'':'display:none'}">
+          <label>Select Time Slot *</label>
+          <div class="slot-grid">${slots.map(s=>{
+            const a = availMap[s.id];
+            const isRec = aiSuggestion?.bestSlot === s.id;
+            const dc = dotColor[a?.availabilityColor||'green'];
+            return `<div class="slot-card${slot.slotId===s.id?' sel':''}" onclick="setSlot('${s.id}',this)">
+              ${isRec ? `<div class="ai-tag">🤖 AI Pick</div>` : ''}
+              <div class="avail-dot" style="background:${dc}"></div>
+              <span class="s-icon">${s.icon}</span>
+              <div class="s-name">${s.name}</div>
+              <div class="s-time">${s.time}</div>
+              ${a ? `<div style="font-size:10px;margin-top:4px;font-weight:600;color:${slot.slotId===s.id?'#a5b4fc':dc}">${a.availability}</div>` : ''}
+            </div>`;
+          }).join('')}</div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:4px">
+          <button class="btn-back" onclick="step=1;renderStep()">← Back</button>
+          <button class="btn btn-primary" onclick="next2()">Continue → Payment</button>
+        </div>
+      </div>`;
+    }
+
+    else if (step===3) {
+      c.innerHTML = `<div class="card">
+        <div class="card-title">💳 Payment Method</div>
+        <div class="pay-grid">
+          <div class="pay-card${pay.method==='upi'?' sel':''}" onclick="setPay('upi',this)"><span class="p-icon">📱</span><div><div class="p-name">UPI</div><div class="p-desc">Pay via UPI ID</div></div></div>
+          <div class="pay-card${pay.method==='credit_card'?' sel':''}" onclick="setPay('credit_card',this)"><span class="p-icon">💳</span><div><div class="p-name">Card</div><div class="p-desc">Credit/Debit card</div></div></div>
+          <div class="pay-card${pay.method==='gpay'?' sel':''}" onclick="setPay('gpay',this)"><span class="p-icon">🟢</span><div><div class="p-name">Google Pay</div><div class="p-desc">Pay with GPay</div></div></div>
+          <div class="pay-card${pay.method==='cod'?' sel':''}" onclick="setPay('cod',this)"><span class="p-icon">💵</span><div><div class="p-name">Cash on Delivery</div><div class="p-desc">Pay at doorstep</div></div></div>
+        </div>
+        <div id="payExtra" style="margin-top:14px"></div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn-back" onclick="step=2;renderStep()">← Back</button>
+          <button class="btn btn-primary" onclick="next3()">Review Order →</button>
+        </div>
+      </div>`;
+    }
+
+    else if (step===4) {
+      const sl = slots.find(s=>s.id===slot.slotId);
+      const isAiSlot = aiSuggestion?.bestSlot === slot.slotId;
+      c.innerHTML = `<div class="card">
+        <div class="card-title">📋 Review & Confirm</div>
+        ${isAiSlot ? `<div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:10px;padding:9px 13px;font-size:12px;color:#065f46;margin-bottom:12px;font-weight:600">🤖 ✅ You selected the AI-recommended slot!</div>` : ''}
+        <div class="review-row"><span>📍 Address</span><strong>${del.address}</strong></div>
+        <div class="review-row"><span>📞 Phone</span><strong>${del.phone}</strong></div>
+        <div class="review-row"><span>⏰ Slot</span><strong>${slot.date} — ${sl?.icon} ${sl?.name} (${sl?.time})</strong></div>
+        <div class="review-row"><span>💳 Payment</span><strong>${pay.method.replace('_',' ').toUpperCase()}</strong></div>
+        ${routeInfo ? `<div class="review-row"><span>🗺️ Traffic</span><strong>${routeInfo.traffic.emoji} ${routeInfo.traffic.label} · ~${routeInfo.traffic.eta} min</strong></div>` : ''}
+        <hr class="divider">
+        ${cart.map(i=>`<div class="review-row"><span>${i.name} ×${i.quantity}</span><strong>₹${i.price*i.quantity}</strong></div>`).join('')}
+        <hr class="divider">
+        <div class="review-row" style="font-weight:900;font-size:16px"><span>Total</span><span style="color:var(--primary)">₹${total.toFixed(2)}</span></div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn-back" onclick="step=3;renderStep()">← Back</button>
+          <button class="btn btn-success btn-lg" id="placeBtn" onclick="placeOrder()">🎉 Place Order — ₹${total.toFixed(2)}</button>
+        </div>
+      </div>`;
+    }
+  }
+
+  function next1() { del.address=document.getElementById('fAddr').value.trim(); del.phone=document.getElementById('fPhone').value.trim(); del.email=document.getElementById('fEmail').value.trim(); if(!del.address||!del.phone||!del.email) return showErr('Please fill all fields'); step=2; renderStep(); }
+  function next2() { if(!slot.date||!slot.slotId) return showErr('Please select a date and time slot'); step=3; renderStep(); }
+  function next3() {
+    if (!pay.method) return showErr('Please select a payment method');
+    if (pay.method==='upi')         { pay.upiId=document.getElementById('upiId')?.value.trim(); if(!pay.upiId) return showErr('Please enter UPI ID'); }
+    if (pay.method==='credit_card') { pay.cardNum=document.getElementById('cNum')?.value.trim(); pay.cardExp=document.getElementById('cExp')?.value.trim(); pay.cardCvv=document.getElementById('cCvv')?.value.trim(); if(!pay.cardNum||!pay.cardExp||!pay.cardCvv) return showErr('Please fill card details'); }
+    step=4; renderStep();
+  }
+
+  function setDate(d, btn) { slot.date=d; document.querySelectorAll('.date-btn').forEach(b=>b.classList.remove('sel')); btn.classList.add('sel'); document.getElementById('slotGroup').style.display=''; }
+  function setSlot(id, el)  { slot.slotId=id; document.querySelectorAll('.slot-card').forEach(b=>b.classList.remove('sel')); el.classList.add('sel'); }
+
+  function setPay(m, el) {
+    pay.method=m; document.querySelectorAll('.pay-card').forEach(b=>b.classList.remove('sel')); el.classList.add('sel');
+    const ex = document.getElementById('payExtra');
+    if (m==='upi')         ex.innerHTML=`<div class="form-group"><label>UPI ID *</label><input id="upiId" placeholder="name@upi" value="${pay.upiId||''}"></div>`;
+    else if (m==='credit_card') ex.innerHTML=`<div class="form-group"><label>Card Number *</label><input id="cNum" placeholder="1234 5678 9012 3456" maxlength="16"></div><div class="form-row"><div class="form-group"><label>Expiry *</label><input id="cExp" placeholder="MM/YY" maxlength="5"></div><div class="form-group"><label>CVV *</label><input id="cCvv" type="password" placeholder="123" maxlength="3"></div></div>`;
+    else if (m==='gpay')   ex.innerHTML=`<div style="background:#d1fae5;color:#065f46;padding:12px;border-radius:10px;font-size:13px;font-weight:600">✅ You'll be redirected to Google Pay on confirmation.</div>`;
+    else if (m==='cod')    ex.innerHTML=`<div style="background:#fef3c7;color:#92400e;padding:12px;border-radius:10px;font-size:13px;font-weight:600">💡 Keep ₹${total.toFixed(2)} ready. Agent collects on delivery.</div>`;
+    else ex.innerHTML='';
+  }
+
+  async function placeOrder() {
+    const btn = document.getElementById('placeBtn');
+    btn.textContent='Placing…'; btn.disabled=true;
+    const sl = slots.find(s=>s.id===slot.slotId);
+    try {
+      const isAiSlot = aiSuggestion?.bestSlot === slot.slotId;
+      const d = await api('POST','/api/orders',{
+        items: cart.map(i=>({product:i._id,name:i.name,price:i.price,quantity:i.quantity,image:i.image})),
+        deliveryAddress: del.address, phone: del.phone, email: del.email,
+        timeSlot: { date: slot.date, slot: `${sl?.icon} ${sl?.name} (${sl?.time})` },
+        paymentMethod: pay.method,
+        paymentDetails: { transactionId:'TXN-'+Date.now(), upiId:pay.upiId, cardLast4:pay.cardNum?.slice(-4) },
+        totalAmount: total,
+        aiSuggestedSlot: isAiSlot ? { slot: aiSuggestion.bestSlot, reason: aiSuggestion.reason, confidence: aiSuggestion.confidence, generatedAt: new Date() } : null,
+        trafficLevel: routeInfo?.trafficLevel || 'low',
+        weatherCondition: routeInfo?.weatherCondition || 'clear',
+        estimatedTime: routeInfo?.traffic?.eta || 35
+      });
+      localStorage.removeItem('qd_cart');
+      window.location.href = '/order/' + d.order._id;
+    } catch(e) { showErr(e.message); btn.textContent=`🎉 Place Order — ₹${total.toFixed(2)}`; btn.disabled=false; }
+  }
+
+  renderStep();
+</script>
+</body>
+</html>

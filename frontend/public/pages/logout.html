@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Goodbye – QuickDeliver</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;width:100%;overflow:hidden;font-family:'Plus Jakarta Sans',sans-serif}
+
+  /* Full-screen centered layout */
+  .page{
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* Background image layer */
+  .bg{position:absolute;inset:0;z-index:0}
+  .bg img{width:100%;height:100%;object-fit:cover;display:block}
+  .bg-ov{position:absolute;inset:0;background:linear-gradient(135deg,rgba(15,23,42,.94),rgba(30,27,75,.9))}
+
+  /* Centered card */
+  .card{
+    position:relative;
+    z-index:1;
+    text-align:center;
+    padding:48px 44px;
+    max-width:580px;
+    width:calc(100% - 32px);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  .wave{font-size:64px;display:block;margin-bottom:14px;animation:wv .8s ease 3}
+  @keyframes wv{0%,100%{transform:rotate(0)}30%{transform:rotate(20deg)}70%{transform:rotate(-12deg)}}
+
+  .title{font-size:42px;font-weight:900;color:#fff;margin-bottom:8px;line-height:1.1}
+  .sub{font-size:17px;color:rgba(255,255,255,.58);margin-bottom:32px}
+
+  .qbox{
+    background:rgba(255,255,255,.07);
+    backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:22px;
+    padding:24px 32px;
+    margin-bottom:30px;
+    width:100%;
+  }
+  .qm{font-size:46px;color:#a5b4fc;line-height:.8;font-family:Georgia,serif;display:block;margin-bottom:10px}
+  .qt{font-size:17px;color:#e2e8f0;font-style:italic;line-height:1.8;margin-bottom:12px}
+  .qa{font-size:11px;color:#a5b4fc;font-weight:700;letter-spacing:1.2px;text-transform:uppercase}
+
+  .btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:20px;width:100%}
+  .btns a{
+    padding:13px 28px;
+    border-radius:13px;
+    font-weight:800;
+    font-size:15px;
+    text-decoration:none;
+    transition:all .2s;
+    font-family:inherit;
+    display:inline-block;
+  }
+  .btns a:hover{transform:translateY(-2px);opacity:.9}
+  .b1{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 6px 24px rgba(99,102,241,.35)}
+  .b2{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)}
+
+  .timer{color:rgba(255,255,255,.32);font-size:13px}
+  .timer span{color:rgba(255,255,255,.55);font-weight:700}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="bg">
+    <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&q=80" alt="scenic">
+    <div class="bg-ov"></div>
+  </div>
+  <div class="card">
+    <span class="wave">👋</span>
+    <div class="title">See You Soon!</div>
+    <div class="sub">You've been logged out successfully</div>
+    <div class="qbox">
+      <span class="qm">"</span>
+      <div class="qt" id="qt">Loading…</div>
+      <div class="qa" id="qa"></div>
+    </div>
+    <div class="btns">
+      <a href="/login" class="b1">🔑 Login Again</a>
+      <a href="/" class="b2">🏠 Back to Home</a>
+    </div>
+    <div class="timer">Redirecting to home in <span id="t">10</span>s</div>
+  </div>
+</div>
+<script>
+  const quotes = [
+    { t: 'The secret of getting ahead is getting started.', a: 'Mark Twain' },
+    { t: 'Every delivery is a promise kept — and trust delivered.', a: 'QuickDeliver' },
+    { t: 'Good things come to those who don\'t wait — they order.', a: 'QuickDeliver' },
+    { t: 'Happiness is having your groceries arrive before you even missed them.', a: 'QuickDeliver' },
+    { t: 'Life is too short for slow deliveries and stale groceries.', a: 'QuickDeliver' },
+    { t: 'The best time to order was yesterday. The next best time is now.', a: 'QuickDeliver' },
+    { t: 'Wherever you go, go with all your heart — and a full cart.', a: 'QuickDeliver' },
+    { t: 'Small steps every day lead to extraordinary journeys.', a: 'Paulo Coelho' },
+    { t: 'Great service is not just about speed — it\'s about care delivered.', a: 'QuickDeliver' },
+    { t: 'Come back soon. Your cart misses you already. 🛒', a: 'The QuickDeliver Team' },
+    { t: 'Freshness is just one click away — we\'ll be here when you return.', a: 'QuickDeliver' },
+    { t: 'Thank you for choosing us. Your next delivery awaits!', a: 'QuickDeliver Team' }
+  ];
+  const q = quotes[Math.floor(Math.random() * quotes.length)];
+  document.getElementById('qt').textContent = q.t;
+  document.getElementById('qa').textContent = '— ' + q.a;
+  let n = 10;
+  const iv = setInterval(() => {
+    n--;
+    document.getElementById('t').textContent = n;
+    if (n <= 0) { clearInterval(iv); location.href = '/'; }
+  }, 1000);
+</script>
+</body>
+</html>

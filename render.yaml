@@ -1,0 +1,15 @@
+# Optional: one-click blueprint for https://render.com (Docker web service for the Java backend)
+services:
+  - type: web
+    name: quickdeliver-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/products
+    envVars:
+      - key: MONGO_URI        # your MongoDB Atlas connection string
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE
+        value: 7d

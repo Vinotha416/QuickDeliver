@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Order Details – QuickDeliver</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .success-banner{background:var(--grad);border-radius:20px;padding:32px;color:#fff;margin-bottom:22px;text-align:center;position:relative;overflow:hidden}
+  .success-banner::before{content:'📦';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:72px;opacity:.15}
+  .success-banner h1{font-size:26px;font-weight:900;margin-bottom:6px}
+  .success-banner .ord-num{color:rgba(255,255,255,.75);margin-bottom:18px}
+  .success-banner .btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .success-banner .btns a{padding:9px 20px;border-radius:10px;font-weight:700;font-size:13px;text-decoration:none}
+  .info-row{display:flex;justify-content:space-between;font-size:13px;padding:9px 0;border-bottom:1px solid #f1f5f9}
+  .info-row:last-child{border-bottom:none}
+  .notif-row{display:flex;gap:10px;background:#f8fafc;border-radius:10px;padding:12px;margin-bottom:8px;border-left:3px solid var(--primary)}
+  .fb-done{text-align:center;padding:24px}
+</style>
+</head>
+<body>
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div class="app-shell">
+  <div id="sidebar" class="sidebar"></div>
+  <div class="main-area">
+    <div id="topbar" class="topbar"></div>
+    <div class="page-content">
+      <div id="wrap"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  const _u = requireRole(null); if (!_u) throw '';
+  const user=getUser();
+  initShell(user.role, 'Order Details');
+  const orderId=window.location.pathname.split('/').pop();
+  let order=null, fbRating=0, agRating=0;
+
+  async function load(){
+    try{const d=await api('GET','/api/orders/'+orderId);order=d.order;render();}
+    catch(e){document.getElementById('wrap').innerHTML=`<div class="empty-state"><div class="icon">⚠️</div><h3>Order not found</h3><a href="/orders" class="btn btn-primary">Back to Orders</a></div>`;}
+  }
+
+  function render(){
+    const o=order;
+    const icons={weather:'🌧️',traffic:'🚦',delay:'⏰',status:'📦',reschedule:'🔄',general:'📢'};
+    const canFb=o.status==='delivered'&&!o.feedback?.rating&&user.role==='customer';
+    document.getElementById('wrap').innerHTML=`
+      <div class="success-banner">
+        <div style="font-size:48px;margin-bottom:8px">${o.status==='delivered'?'🎉':'📦'}</div>
+        <h1>${o.status==='delivered'?'Order Delivered!':'Order #'+o.orderNumber?.slice(-8)}</h1>
+        <div class="ord-num">Order ${o.orderNumber}</div>
+        <div class="btns">
+          <a href="/orders" style="background:rgba(255,255,255,.15);color:#fff">← All Orders</a>
+          <a href="/products" style="background:#fff;color:#1e1b4b">🛍️ Shop More</a>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">📋 Order Info</div>
+          <div class="info-row"><span>Order #</span><strong>${o.orderNumber}</strong></div>
+          <div class="info-row"><span>Status</span><span class="badge status-${o.status}">${o.status.replace(/_/g,' ')}</span></div>
+          <div class="info-row"><span>Payment</span><strong>${o.paymentMethod?.toUpperCase()}</strong></div>
+          <div class="info-row"><span>Payment Status</span><span style="color:${o.paymentStatus==='paid'?'var(--success)':'var(--warning)'};font-weight:700">${o.paymentStatus}</span></div>
+          ${o.paymentDetails?.transactionId?`<div class="info-row"><span>Transaction ID</span><strong style="font-size:12px">${o.paymentDetails.transactionId}</strong></div>`:''}
+          ${o.paymentDetails?.cardLast4?`<div class="info-row"><span>Card</span><strong>•••• ${o.paymentDetails.cardLast4}</strong></div>`:''}
+          <div class="info-row"><span>Total</span><strong style="font-size:18px;color:var(--primary)">₹${o.totalAmount}</strong></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🚚 Delivery Info</div>
+          <div class="info-row"><span>Address</span><strong>${o.deliveryAddress}</strong></div>
+          <div class="info-row"><span>Phone</span><strong>${o.phone}</strong></div>
+          <div class="info-row"><span>Date</span><strong>${o.timeSlot?.date}</strong></div>
+          <div class="info-row"><span>Slot</span><strong>${o.timeSlot?.slot}</strong></div>
+          ${o.agent?`<div class="info-row"><span>Agent</span><strong>🚴 ${o.agent.name}</strong></div>`:''}
+          ${o.deliveredAt?`<div class="info-row"><span>Delivered At</span><strong>${new Date(o.deliveredAt).toLocaleString('en-IN')}</strong></div>`:''}
+        </div>
+      </div>
+      <div class="card" style="margin-top:18px">
+        <div class="card-title">🛒 Items Ordered</div>
+        ${o.items.map(i=>`<div class="info-row"><span>${i.name} ×${i.quantity}</span><strong>₹${i.price*i.quantity}</strong></div>`).join('')}
+        <div class="info-row" style="font-weight:900;font-size:16px;margin-top:4px"><span>Total</span><span style="color:var(--primary)">₹${o.totalAmount}</span></div>
+      </div>
+      ${o.notifications?.length?`<div class="card" style="margin-top:18px">
+        <div class="card-title">🔔 Delivery Alerts</div>
+        ${o.notifications.map(n=>`<div class="notif-row"><span style="font-size:22px;flex-shrink:0">${icons[n.type]||'📢'}</span><div><div style="font-weight:600;font-size:13px">${n.message}</div><div style="font-size:11px;color:#94a3b8;margin-top:2px">${new Date(n.sentAt).toLocaleString('en-IN')}</div></div></div>`).join('')}
+      </div>`:''}
+      ${o.rescheduleHistory?.length?`<div class="card" style="margin-top:18px">
+        <div class="card-title">🔄 Reschedule History</div>
+        ${o.rescheduleHistory.map(r=>`<div class="info-row" style="flex-direction:column;align-items:flex-start;gap:2px">
+          <span>Rescheduled from <strong>${r.oldDate} ${r.oldSlot}</strong> → <strong>${r.newDate} ${r.newSlot}</strong></span>
+          <span style="font-size:11px;color:#94a3b8">Reason: ${r.reason} | ${new Date(r.at).toLocaleString('en-IN')}</span>
+        </div>`).join('')}
+      </div>`:''}
+      <div class="card" style="margin-top:18px">
+        <div class="card-title">📍 Status Timeline</div>
+        <div class="timeline">${o.statusHistory.map(h=>`<div class="tl-item"><div class="tl-dot"></div><div><div class="tl-status">${h.status.replace(/_/g,' ')}</div><div class="tl-note">${h.note}</div><div class="tl-time">${new Date(h.timestamp).toLocaleString('en-IN')}</div></div></div>`).join('')}</div>
+      </div>
+      <div class="card" id="fbCard" style="margin-top:18px">
+        <div class="card-title">⭐ Rate Your Experience</div>
+        ${o.feedback?.rating?`<div class="fb-done"><div style="font-size:48px;margin-bottom:8px">🎉</div><h4>Thank you for your feedback!</h4><p style="color:var(--muted);margin-top:6px">${'⭐'.repeat(o.feedback.rating)} (${o.feedback.rating}/5)</p>${o.feedback.comment?`<p style="font-style:italic;color:var(--muted);margin-top:8px">"${o.feedback.comment}"</p>`:''}</div>`
+        :canFb?`
+          <div class="form-group"><label>Overall Rating *</label><div class="stars-row">${[1,2,3,4,5].map(i=>`<button class="star-btn" onclick="setFb(${i})" id="fb${i}">⭐</button>`).join('')}</div></div>
+          <div class="form-group"><label>Agent Rating</label><div class="stars-row">${[1,2,3,4,5].map(i=>`<button class="star-btn" onclick="setAg(${i})" id="ag${i}">⭐</button>`).join('')}</div></div>
+          <div class="form-group"><label>Comments</label><textarea id="fbCmt" rows="3" placeholder="Share your experience..."></textarea></div>
+          <button class="btn btn-primary" onclick="submitFb()">✨ Submit Feedback</button>
+        `:`<div style="background:#f8fafc;border-radius:10px;padding:16px;color:var(--muted);text-align:center;font-size:14px">${o.status==='delivered'?'✅ Feedback already submitted.':'⏳ Feedback unlocks after delivery. Current: '+o.status}</div>`}
+      </div>`;
+  }
+
+  function setFb(n){fbRating=n;for(let i=1;i<=5;i++)document.getElementById('fb'+i)?.classList.toggle('on',i<=n);}
+  function setAg(n){agRating=n;for(let i=1;i<=5;i++)document.getElementById('ag'+i)?.classList.toggle('on',i<=n);}
+
+  async function submitFb(){
+    if(!fbRating){toast('Please select a rating','error');return;}
+    const comment=document.getElementById('fbCmt')?.value.trim();
+    try{await api('POST','/api/orders/'+orderId+'/feedback',{rating:fbRating,comment,agentRating:agRating});toast('Thank you for your feedback! 🎉');await load();}
+    catch(e){toast(e.message,'error');}
+  }
+  load();
+</script>
+</body>
+</html>

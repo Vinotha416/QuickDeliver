@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Ravi Kumar",
+    "email": "ravi@agent.com",
+    "password": "Agent@1234",
+    "phone": "9876543210",
+    "role": "agent",
+    "agentStatus": "available"
+  },
+  {
+    "name": "Priya Sharma",
+    "email": "priya@agent.com",
+    "password": "Agent@1234",
+    "phone": "9876543211",
+    "role": "agent",
+    "agentStatus": "available"
+  },
+  {
+    "name": "Suresh Babu",
+    "email": "suresh@agent.com",
+    "password": "Agent@1234",
+    "phone": "9876543212",
+    "role": "agent",
+    "agentStatus": "available"
+  },
+  {
+    "name": "Anita Devi",
+    "email": "anita@agent.com",
+    "password": "Agent@1234",
+    "phone": "9876543213",
+    "role": "agent",
+    "agentStatus": "offline"
+  },
+  {
+    "name": "Karthik Raja",
+    "email": "karthik@agent.com",
+    "password": "Agent@1234",
+    "phone": "9876543214",
+    "role": "agent",
+    "agentStatus": "available"
+  }
+]
